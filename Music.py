@@ -55,23 +55,30 @@ class Songs:
             minimum_songs = [self]
 
         delta_x, delta_y = self.getDelta(target)
-
         current_list = self.getQuadrantList()
 
-        target_angle = math.degrees(math.atan2(delta_y, delta_x))
+        target_angle = math.degrees(math.atan2(delta_y, delta_x)) % 360
 
-        upper_bound = target_angle + 20
-        lower_bound = target_angle - 20  # angle ranges
+        lower_bound = (target_angle - 20) % 360
+        upper_bound = (target_angle + 20) % 360  # angle ranges
 
         filtered_list = []
 
         for song in current_list:  # removing angles outside the range
+            if song in minimum_songs:
+                continue
+
             delta_x, delta_y = self.getDelta(song)
 
-            angle = math.degrees(math.atan2(delta_y, delta_x))
+            angle = math.degrees(math.atan2(delta_y, delta_x)) % 360
 
-            if lower_bound <= angle <= upper_bound and song != self:  # check if it's within the range
-                filtered_list.append(song)
+            # handle wrap-around
+            if lower_bound < upper_bound:
+                if lower_bound <= angle <= upper_bound:
+                    filtered_list.append(song)
+            else:  # wrap-around case
+                if angle >= lower_bound or angle <= upper_bound:
+                    filtered_list.append(song)
 
         if not filtered_list:  # if the list is empty - meaning no more songs in the same quadrant within the range
             return minimum_songs  # returns the list made for the quadrant it's in
@@ -79,49 +86,38 @@ class Songs:
         minimum_song = None
         minimum_distance = float('inf')
 
-        for song in filtered_list:  # finds the minimum Euclidean distance
+        # finds the minimum Euclidean distance
+        minimum_song = min(
+            filtered_list,
+            key=lambda s: math.hypot(*(self.getDelta(s))),
+            default=None
+        )
 
-            delta_x, delta_y = self.getDelta(song)
+        if minimum_song is None:
+            return minimum_songs
 
-            magnitude = math.sqrt(delta_x ** 2 + delta_y ** 2)
-
-            if magnitude < minimum_distance and magnitude != 0:
-                minimum_distance = magnitude
-                minimum_song = song
-
-        if minimum_song is not None:  # if minimum_song exists
-            if minimum_song is not target:
-                minimum_songs.append(minimum_song)
-                return minimum_song.calc(target, minimum_songs)  # if minimum_song is not the target call the method again
-            else:
-
-                minimum_songs.append(minimum_song)
-                return minimum_songs
+        if minimum_song != target:  # if it isn't target recursively call function with the next node
+            minimum_songs.append(minimum_song)
+            return minimum_song.calc(target, minimum_songs)
         else:
-            return "No songs found within the range"  # error handling
+            minimum_songs.append(minimum_song)
+            return minimum_songs
 
     def transition(self, target):  # when an axis is met and need to transition to another quadrant
         x = self.getCoord()[0]
         y = self.getCoord()[1]
 
-        if x > 0 and y > 0:
-            transition_list = Songs.second_list + Songs.third_list + Songs.fourth_list
-
-        elif x < 0 and y > 0:
-            transition_list = Songs.first_list + Songs.third_list + Songs.fourth_list
-
-        elif x < 0 and y < 0:
-            transition_list = Songs.first_list + Songs.second_list + Songs.fourth_list
-
-        else:
-            transition_list = Songs.first_list + Songs.second_list + Songs.third_list  # list of objects in the other 3 quadrants
+        transition_list = (
+                Songs.first_list + Songs.second_list + Songs.third_list + Songs.fourth_list
+        )
+        transition_list = [s for s in transition_list if s != self]
 
         delta_x, delta_y = self.getDelta(target)
 
-        target_angle = math.degrees(math.atan2(delta_y, delta_x))
+        target_angle = math.degrees(math.atan2(delta_y, delta_x)) % 360
 
-        upper_bound = target_angle + 20
-        lower_bound = target_angle - 20  # angle ranges
+        lower_bound = (target_angle - 20) % 360
+        upper_bound = (target_angle + 20) % 360  # angle ranges
 
         filtered_transition_list = []
 
@@ -129,23 +125,24 @@ class Songs:
 
             delta_x, delta_y = self.getDelta(song)
 
-            angle = math.degrees(math.atan2(delta_y, delta_x))
+            angle = math.degrees(math.atan2(delta_y, delta_x)) % 360
 
-            if lower_bound <= angle <= upper_bound:
-                filtered_transition_list.append(song)
+            if lower_bound < upper_bound:
+                if lower_bound <= angle <= upper_bound:
+                    filtered_transition_list.append(song)
+            else:  # wrap-around
+                if angle >= lower_bound or angle <= upper_bound:
+                    filtered_transition_list.append(song)
 
-        minimum_song = None
-        minimum_distance = float('inf')
+        if not filtered_transition_list:
+            return None
 
-        for song in filtered_transition_list:  # finds the minimum Euclidean distance
-            delta_x, delta_y = self.getDelta(song)
-
-            magnitude = math.sqrt(delta_x ** 2 + delta_y ** 2)
-
-            if magnitude < minimum_distance and magnitude != 0:
-                minimum_distance = magnitude
-                minimum_song = song
-
+        # closest song
+        minimum_song = min(
+            filtered_transition_list,
+            key=lambda s: math.hypot(*self.getDelta(s)),
+            default=None
+        )
         return minimum_song
 
     def find_playlist(self, target, playlist=None):
@@ -153,17 +150,16 @@ class Songs:
         if playlist is None:  # will only be None at the start
             playlist = self.calc(target)
         else:
-            playlist += self.calc(target)
+            playlist += [s for s in self.calc(target) if s not in playlist]
 
         if target in playlist:  # if target is in the same quadrant as the starting point
                                 # then no need for transition
             return playlist
 
         current_song = playlist[-1]  # last song in the current playlist
-
         next_song = current_song.transition(target)  # next song after transitioning to another quadrant
 
-        if next_song is target:
+        if next_song == target:
             playlist.append(target)
             return playlist
 

@@ -27,7 +27,7 @@ login_manager.login_view = "login"  # redirect to log in
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return db.session.get(User, user_id)
 
 
 
@@ -50,7 +50,6 @@ def home():
         data = request.form
 
         input_text = str(data.get('text'))
-
         desired_emotion = str(data.get('emotion'))
 
 
@@ -70,11 +69,9 @@ def home():
                 predicted_emotion = get_predicted_emotion(predictions)  # most likely emotion
 
                 starting_coord = get_starting_coord(predictions)  # starting coord algorithm applied
-
                 target_coord = get_target_coord(desired_emotion)  # target coord found using the checkbox input
 
                 start_object = get_quadrant_object("start", starting_coord)
-
                 target_object = get_quadrant_object("target", target_coord)
 
                 playlist = start_object.find_playlist(target_object)
