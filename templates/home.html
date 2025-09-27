@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootswatch@4.5.2/dist/darkly/bootstrap.min.css"
+      crossorigin="anonymous"
+    />
+
+</head>
+
+<body>
+
+    <nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
+        <div class="container-fluid">
+
+            <div class="collapse navbar-collapse" id="navbarColor01">
+
+              <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                  <a class="nav-link text-light" href="{{url_for('home')}}">Home
+                  </a>  <!-- will only refresh the page as we are already at Home -->
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link text-light" href="{{url_for('profile')}}">Profile</a>
+                </li>  <!-- click to go to the profile page -->
+              </ul>
+
+            </div>
+
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                  <a class="nav-link text-light" href="{{url_for('logout')}}">Logout</a>
+                </li>  <!-- click to log out and go to the login page -->
+            </ul>
+
+      </div>
+    </nav>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+
+        {% if messages %}
+            {% for category, message in messages %}
+                {% if category == 'error' %}
+
+                    <div class="alert alert-dismissible alert-danger">
+                        <strong>Oh snap!</strong> {{ message }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">&times;</button>
+                    </div>
+
+                    {% else %}
+                    <div class="alert alert-dismissible alert-success">
+                        {{ message }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">&times;</button>
+                    </div>
+
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+
+    {% endwith %}
+
+    <div align="center">
+        <form method="POST" style="width: 75%">
+            <label class="form-label mt-4"><h3>How are you feeling today?</h3></label>    <!-- form for text input -->
+            <textarea class="form-control" id="exampleTextarea" name="text" rows="3" style="height: 88px;">{{ input_text }}</textarea>
+
+            <br>
+
+            {% if not predicted_emotion %}  <!-- before submission -->
+                <h3>How do you want to feel?</h3>
+
+                <div class="row">
+                        <!-- Positive Emotions Column -->
+                        <div class="col-md-4">
+                            <h6 class="text-success">Positive Emotions</h6>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="emotion" id="Happiness" value="Happiness">
+                                <label class="form-check-label">Happiness</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="emotion" id="Enthusiasm" value="Enthusiasm">
+                                <label class="form-check-label">Enthusiasm</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="emotion" id="Love" value="Love">
+                                <label class="form-check-label">Love</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="emotion" id="Relief" value="Relief">
+                                <label class="form-check-label">Relief</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="emotion" id="Fun" value="Fun">
+                                <label class="form-check-label">Fun</label>
+                            </div>
+                        </div>
+
+                        <!-- Neutral Emotions Column -->
+                        <div class="col-md-4">
+                            <h6 class="text-secondary">Neutral Emotions</h6>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="emotion" id="Neutral" value="Neutral">
+                                <label class="form-check-label">Neutral</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="emotion" id="Boredom" value="Boredom">
+                                <label class="form-check-label">Boredom</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="emotion" id="Empty" value="Empty">
+                                <label class="form-check-label">Empty</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="emotion" id="Surprise" value="Surprise">
+                                <label class="form-check-label">Surprise</label>
+                            </div>
+                        </div>
+
+                        <!-- Negative Emotions Column -->
+                        <div class="col-md-4">
+                            <h6 class="text-danger">Negative Emotions</h6>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="emotion" id="Anger" value="Anger">
+                                <label class="form-check-label">Anger</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="emotion" id="Hate" value="Hate">
+                                <label class="form-check-label">Hate</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="emotion" id="Sadness" value="Sadness">
+                                <label class="form-check-label">Sadness</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="emotion" id="Worry" value="Worry">
+                                <label class="form-check-label">Worry</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end mt-4">
+                        <button type="submit" class="btn btn-primary">Submit</button>
+                    </div>
+                {% endif %}
+    </form>
+
+    <br>
+
+    {% if predicted_emotion %}  <!-- after submission -->
+        <div class="container">
+            <!-- Row for 'You are feeling' -->
+            <div class="row">
+                <div class="col-12 d-flex justify-content-start align-items-center">
+                    <h4>You are feeling:</h4>
+                </div>
+            </div>
+
+            <!-- Row for emotion and progress bars -->
+            <div class="row">
+
+                {% for i in range(emotions | length) %}   <!-- Bar for each emotion above 5% -->
+                    {% set prediction_value = predictions_list[i] * 100 %}  <!-- turn probability into percentage -->
+                    {% set prediction_value = prediction_value | round(1) %}
+                    <div class="col-12 col-md-6 mb-3 d-flex align-items-center">
+                        <h4 class="mr-3" style="width: 30%">{{ emotions[i] }}   {{ prediction_value | round(1) }}%</h4>  <!-- show the user the emotion
+                                                                                                                         and its likelihood -->
+                        <div class="progress" style="width: 70%;">
+                            <div class="progress-bar bg-info"
+                                 role="progressbar"
+                                 style="width: {{ prediction_value }}%;"
+                                 aria-valuenow="{{ prediction_value }}"
+                                 aria-valuemin="0"
+                                 aria-valuemax="100">  <!-- this will set the width of the bar as the percentage -->
+                            </div>
+                        </div>
+                    </div>
+
+                {% endfor %}
+
+                {% set others_percentage = (1 - total_prediction_sum) * 100 %}   <!-- value left after the main emotions above 5% -->
+
+                {% if others_percentage >= 0.5 %}  <!-- checks if there even is any -->
+                    <div class="col-12 col-md-6 mb-3 d-flex align-items-center">
+                        <h4 class="mr-3" style="width: 30%">Others: {{ others_percentage | round(1) }}%</h4>
+                        <div class="progress" style="width: 70%;">
+                            <div class="progress-bar bg-info"
+                                 role="progressbar"
+                                 style="width: {{ others_percentage | round(1) }}%;"
+                                 aria-valuenow="{{ others_percentage | round(1) }}"
+                                 aria-valuemin="0"
+                                 aria-valuemax="100">
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="row">
+                <div class="col-12 d-flex justify-content-start align-items-center">
+                    <h4>You want to feel: {{ desired_emotion }}</h4>  <!-- selection from earlier -->
+                </div>
+            </div>
+
+            <h1>Playlist</h1>
+
+            <!-- Playlist section -->
+            <ul class="list-group">
+                {% for song in songs_playlist %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ song }}
+                    </li>
+
+                {% endfor %}
+            </ul>
+
+            <div class="row">
+                <div class="col-12 text-right">
+                    <a href="{{ url_for('home') }}" class="btn btn-link">Make another playlist?</a>
+                </div>
+            </div>
+
+    {% endif %}
+</div>
+
+
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+    integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+    crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+    integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+    crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+    integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+    crossorigin="anonymous"></script>
+
+
+</body>
+
+</html>
+
+

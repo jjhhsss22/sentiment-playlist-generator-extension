@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootswatch@4.5.2/dist/darkly/bootstrap.min.css"
+      crossorigin="anonymous"
+    />
+
+    <title>Title</title>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
+    </nav>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+
+    {% if messages %}
+        {% for category, message in messages %}
+
+        {% if category == 'error' %}
+
+        <div class="alert alert-dismissible alert-danger">
+            <strong>Oh snap!</strong> {{ message }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">&times;</button>
+        </div>
+
+        {% else %}
+        <div class="alert alert-dismissible alert-success">
+            <strong>Well done!</strong> You have successfully created an account
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">&times;</button>
+        </div>
+
+        {% endif %}
+        {% endfor %}
+    {% endif %}
+
+    {% endwith %}
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+
+            <h1>Sign up page</h1>
+
+            <form method="POST" action="{{ url_for('signup') }}">
+                <div class="form-group">
+                    <label>Email address</label>
+                    <input type="email" class="form-control" id="email" name="email" placeholder="Enter email">
+                </div>  <!-- input box for email -->
+
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" class="form-control" id="username" name="username" placeholder="Enter username">
+                </div> <!-- input box for username -->
+
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" class="form-control" id="password" name="password" placeholder="Enter password">
+                </div>  <!-- input box for password -->
+
+                <div>
+                    Your password should have:
+                    <ul>
+                        <li>more than 8 characters</li>
+                        <li>have at least one UPPERCASE</li>
+                        <li>have at least one number</li>
+                    </ul>                                     <!-- rules for creating a password -->
+                </div>
+
+                <div class="form-group">
+                    <label>Confirm password</label>
+                    <input type="password" class="form-control" id="confirm_password" name="confirm_password" placeholder="Confirm password">
+                </div>      <!-- validation for password -->
+
+                <br/>
+
+                <button type="submit" class="btn btn-primary">Submit</button>           <!-- submit button so that the backend can
+                                                                                             collect the typed in data -->
+            </form>
+
+            <br/>
+
+            <a href="{{url_for('login')}}">Already have an account? Log in</a>  <!-- link to login page -->
+
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+crossorigin="anonymous"></script>
+
+</body>
+</html>
