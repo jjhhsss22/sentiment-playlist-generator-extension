@@ -8,8 +8,6 @@ import joblib
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
 
-from matplotlib import pyplot as plt
-
 
 # Structuring
 dataset = pd.read_csv("Dataset/one/emotion_sentimen_dataset.csv")  # Read dataset
