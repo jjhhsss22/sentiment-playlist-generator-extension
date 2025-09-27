@@ -14,7 +14,7 @@ app = Flask(__name__)  # set up flask environment
 pymysql.install_as_MySQLdb()  # initialise pymysql
 
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:sqlsecretkey123@localhost/nea'  # mysql table directory
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:sqlsecretkey123@localhost/spge'  # mysql table directory
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # for better memory usage
 app.config['SECRET_KEY'] = 'sqlsecretkey123'  # our secret key
 

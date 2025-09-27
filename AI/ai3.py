@@ -10,7 +10,7 @@ import tensorflow as tf
 
 
 # Structuring
-dataset = pd.read_csv("Dataset/one/emotion_sentimen_dataset.csv")  # Read dataset
+dataset = pd.read_csv("Dataset/emotion_sentimen_dataset.csv")  # Read dataset
 dataset = dataset.drop(columns=["ID"])  # remove the ID column completely as we do not need them
 
 
@@ -76,28 +76,6 @@ results = model.fit(Filtered_text_train, Emotion_train, epochs=15, batch_size=16
 loss, accuracy = model.evaluate(Filtered_text_test, Emotion_test)
 print("Accuracy: ", accuracy)
 print("Loss: ", loss)
-
-
-plt.figure(figsize=(12, 5))
-
-plt.subplot(1, 2, 1)
-plt.plot(results.history['loss'], label='Train Loss')
-plt.plot(results.history['val_loss'], label='Validation Loss')
-plt.title('model train vs validation loss')
-plt.ylabel('loss')
-plt.xlabel('epoch')
-plt.legend(['train', 'validation'], loc='upper right')
-
-plt.subplot(1, 2, 2)
-plt.plot(results.history['accuracy'], label='Train Accuracy')
-plt.plot(results.history['val_accuracy'], label='Validation Accuracy')
-plt.title('model train vs validation accuracy')
-plt.ylabel('accuracy')
-plt.xlabel('epoch')
-plt.legend(['train', 'validation'], loc='upper right')
-
-plt.show()
-
 
 # Save the model
 model.save("sentiment_model3.keras")
