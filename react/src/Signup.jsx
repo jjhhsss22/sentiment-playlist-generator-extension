@@ -130,10 +130,28 @@ export default function Signup() {
               {errors.password && (
                 <span className="text-red-500 text-sm">{errors.password}</span>
               )}
-              <ul className="text-xs mt-1 list-disc list-inside text-gray-500">
-                <li>More than 8 characters</li>
-                <li>At least one UPPERCASE letter</li>
-                <li>At least one number</li>
+              <ul className="text-xs mt-2 list-none space-y-1">
+                <li
+                  className={`flex items-center ${
+                    formData.password.length >= 8 ? "text-green-600" : "text-gray-500"
+                  }`}
+                >
+                  {formData.password.length >= 8 ? "✅" : "❌"} More than 8 characters
+                </li>
+                <li
+                  className={`flex items-center ${
+                    /[A-Z]/.test(formData.password) ? "text-green-600" : "text-gray-500"
+                  }`}
+                >
+                  {/[A-Z]/.test(formData.password) ? "✅" : "❌"} At least one UPPERCASE letter
+                </li>
+                <li
+                  className={`flex items-center ${
+                    /[0-9]/.test(formData.password) ? "text-green-600" : "text-gray-500"
+                  }`}
+                >
+                  {/[0-9]/.test(formData.password) ? "✅" : "❌"} At least one number
+                </li>
               </ul>
             </div>
 

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_user, login_required, LoginManager, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 import pymysql
@@ -125,7 +125,7 @@ def home():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        data = request.form
+        data = request.get_json()
 
         email = data.get('email')
         username = data.get('username')
@@ -147,23 +147,21 @@ def login():
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':  # when there has been a user input
-        data = request.form  # data from the form
+        data = request.get_json()  # data from the form
 
         email = data.get('email')
         username = data.get('username')
         password = data.get('password')
         confirm_password = data.get('confirm_password')  # id from the HTML file
 
-        user = User.query.filter_by(email=email).first()  # query our User database
-
-        if user:
-            flash("Email already linked to an account", category="error")  # flash messages for different errors
+        if User.query.filter_by(email=email).first():
+            return jsonify({"success": False, "message": "Email already linked to an account."})
 
         elif not is_valid_username(username):
-            flash("Invalid username, cannot have a space", category="error")
+            return jsonify({"success": False, "message": "Invalid username — cannot contain spaces."})
 
         elif not is_valid_password(password, confirm_password):
-            flash("Invalid password", category="error")
+            return jsonify({"success": False, "message": "Invalid password or mismatch."})
 
         else:
             new_user = User(email=email, username=username, password=generate_password_hash(password, method='pbkdf2:sha256'))
