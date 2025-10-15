@@ -152,7 +152,7 @@ def signup():
         email = data.get('email')
         username = data.get('username')
         password = data.get('password')
-        confirm_password = data.get('confirm_password')  # id from the HTML file
+        confirm_password = data.get('confirmPassword')  # id from the HTML file
 
         if User.query.filter_by(email=email).first():
             return jsonify({"success": False, "message": "Email already linked to an account."})
@@ -164,15 +164,16 @@ def signup():
             return jsonify({"success": False, "message": "Invalid password or mismatch."})
 
         else:
-            new_user = User(email=email, username=username, password=generate_password_hash(password, method='pbkdf2:sha256'))
+            new_user = User(email=email,
+                            username=username,
+                            password=generate_password_hash(password, method='pbkdf2:sha256'))
             db.session.add(new_user)
             db.session.commit()  # add the values to the database a new user
 
             login_user(new_user, remember=True)  # user session created with LoginManager
 
-            flash("{}, your account is created!".format(username), category="success")
-
-            return redirect(url_for('home'))  # redirect the user to the home page once logged in
+            return jsonify({"success": True,
+                            "message": f"{username}, your account has been created!"})
 
     return render_template("signup.html")  # if no form is submitted, render the HTML for the signup page
 
