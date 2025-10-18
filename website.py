@@ -133,13 +133,15 @@ def login():
 
         user = User.query.filter_by(email=email).first()
 
-        if user and user.username == username and check_password_hash(user.password, password):  # check the inputted password and the password in the database
-
-            login_user(user, remember=True)
-            flash("Welcome {}, you are logged in".format(username), category="success")
-            return redirect(url_for("home"))
+        if not user:  # verification
+            return jsonify({"success": False, "message": "Invalid email"})
+        elif not user.username == username:
+            return jsonify({"success": False, "message": "Invalid username"})
+        elif not check_password_hash(user.password, password):
+            return jsonify({"success": False, "message": "Invalid password"})
         else:
-            flash("Failed to log in, try again", category="error")
+            login_user(user, remember=True)
+            return jsonify({"success": True, "message": f"Welcome {username}, you are logged in"})
 
     return render_template("login.html")
 
@@ -182,7 +184,6 @@ def signup():
 @login_required
 def profile():
 
-
     playlists = Playlist.query.filter_by(user_id=current_user.id).all()  # query the database for all playlists
                                                                          # created by the current user and store it in a list
     playlist_data = []
@@ -206,6 +207,9 @@ def profile():
 def logout():
     logout_user()
     return render_template("login.html")
+
+    # return jsonify({"success": True, "message": "you have been logged out."})
+
 
 
 # Run the app

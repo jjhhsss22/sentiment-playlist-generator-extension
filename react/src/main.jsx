@@ -23,4 +23,11 @@ if (loginRoot) {
     );
 }
 
+if (logoutRoot) {
+    createRoot(loginRoot).render(
+        <StrictMode>
+            <Logout />
+        </StrictMode>
+    );
+}
 

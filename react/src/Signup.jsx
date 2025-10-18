@@ -22,14 +22,14 @@ export default function Signup() {
     setGeneral("");
     setSuccess("");  // clear old field errors
 
-    // Client-side validation first
-    const newErrors = {};
+    const newErrors = {};  // client-side validation before being sent to backend
+
     if (!formData.email) newErrors.email = "Email is required";
     if (!formData.username) newErrors.username = "Username is required";
     if (!formData.password) newErrors.password = "Password is required";
     else {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
-        newErrors.email = "Invalid email format"
+        newErrors.email = "Invalid email format";
       if (formData.password.length < 8)
         newErrors.password = "Password must be at least 8 characters";
       if (!/[A-Z]/.test(formData.password))
@@ -41,10 +41,9 @@ export default function Signup() {
     }
     if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = "Passwords do not match";
 
-    // Stop if frontend validation failed
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      return;
+      return;  // stop if frontend validation failed
     }
 
     try {
@@ -59,9 +58,7 @@ export default function Signup() {
     if (data.success) {
       setSuccess(data.message || "Account created successfully!");
       setGeneral(""); // clear general errors
-      if (data.redirect) {
-        setTimeout(() => (window.location.href = "/"), 1000);
-      }
+      setTimeout(() => (window.location.href = "/"), 1000);
     } else {
       setGeneral(data.message || "Something went wrong.");
     }
@@ -101,11 +98,12 @@ export default function Signup() {
         <div className="alert alert-success text-sm p-2 mb-4 rounded">{success}</div>
       )}
 
-      {/* Signup Form */}
+      {/* Signup form */}
       <div className="flex items-center justify-center p-4">
         <div className="card w-full max-w-md shadow-lg bg-base-100 p-6 mt-6">
           <h1 className="text-2xl font-bold text-center mb-4">Signup Page</h1>
           <form className="space-y-4" onSubmit={handleSubmit}>
+
             {/* Email */}
             <div className="form-control w-full">
               <label className="label">
