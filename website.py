@@ -34,93 +34,98 @@ def load_user(user_id):
 @app.route('/', methods=['GET', 'POST'])
 @login_required  # requires the user to be authenticated
 def home():
-
-    input_text = ''
-    predicted_emotion = None
-    desired_emotion = None
-    songs_playlist = None
-    emotions =['Anger', 'Boredom', 'Empty',
-           'Enthusiasm', 'Fun', 'Happiness',
-           'Hate', 'Love', 'Neutral',
-           'Relief', 'Sadness', 'Surprise', 'Worry']
-    predictions_list = None
-    total_prediction_sum = 0
-
     if request.method == 'POST':
-        data = request.form
+        data = request.get_json()
 
-        input_text = str(data.get('text'))
-        desired_emotion = str(data.get('emotion'))
+        input_text = data.get("text", "").strip()
+        desired_emotion = data.get("emotion", None)
 
+        emotions =['Anger', 'Boredom', 'Empty',
+               'Enthusiasm', 'Fun', 'Happiness',
+               'Hate', 'Love', 'Neutral',
+               'Relief', 'Sadness', 'Surprise', 'Worry']
 
-        if len(input_text.strip()) == 0 or desired_emotion == "None":  # ensures that all fields on the form are filled out
-            flash("Please fill out all forms for a playlist to be generated", category="error")
-            return redirect('/')
+        if not input_text or not desired_emotion:
+            return jsonify({
+                "success": False,
+                "message": "Please fill out all forms for a playlist to be generated"
+            })
 
-        else:
+        try:
             try:
-                try:
-                    predictions = predict(input_text)  # 2D array with probabilities of emotions
+                predictions = predict(input_text)  # 2D array with probabilities of emotions
+            except InvalidArgumentError:
+                return jsonify({
+                    "success": False,
+                    "message": "Please submit text in full sentences"
+                })
 
-                except InvalidArgumentError:  # error case if user types invalid text
-                    flash("Please submit text in full sentences", category="error")
-                    return redirect('/')
+            predicted_emotion = get_predicted_emotion(predictions)  # most likely emotion
 
-                predicted_emotion = get_predicted_emotion(predictions)  # most likely emotion
+            starting_coord = get_starting_coord(predictions)  # starting coord algorithm applied
+            target_coord = get_target_coord(desired_emotion)  # target coord found using the checkbox input
 
-                starting_coord = get_starting_coord(predictions)  # starting coord algorithm applied
-                target_coord = get_target_coord(desired_emotion)  # target coord found using the checkbox input
+            start_object = get_quadrant_object("start", starting_coord)
+            target_object = get_quadrant_object("target", target_coord)
 
-                start_object = get_quadrant_object("start", starting_coord)
-                target_object = get_quadrant_object("target", target_coord)
+            playlist = start_object.find_playlist(target_object)
 
-                playlist = start_object.find_playlist(target_object)
+            if len(playlist) <= 2:
+                return jsonify({
+                    "success": False,
+                    "message": "No available songs with the provided emotions. You are already at your desired emotion!"
+                })
 
-                if len(playlist) <= 2:
-                    flash("No available songs with the provided emotions", category="error")
-                    return redirect('/')
+            predictions_list = to_list(predictions[0])  # convert the 2D array to a list
+            i = 0
+            total_prediction_sum = 0
 
-            except:
+            while i < len(predictions_list):
+                if predictions_list[i] < 0.05:  # filter out insignificant emotions
+                    del predictions_list[i]
 
-                flash("Error when generating playlist. Please try again", category="error")
-                return redirect('/')
+                    del emotions[i]
+                else:
+                    total_prediction_sum += predictions_list[i]  # also find the total of the significant emotions
+                    i += 1                                       # for the OTHERS bar in home.html
 
-            else:
+            Songs.delete_object(start_object)
+            Songs.delete_object(target_object)  # delete the temporary objects
 
-                i = 0
-                predictions_list = to_list(predictions[0])  # convert the 2D array to a list
+            songs_playlist = Songs.get_named_playlist(playlist)  # convert the object list to named list
+            songs_playlist_text = ', '.join(songs_playlist)  # convert the list into string
 
-                while i < len(predictions_list):
-                    if predictions_list[i] < 0.05:  # filter out insignificant emotions
-                        del predictions_list[i]
+            new_playlist = Playlist(prompt=input_text,
+                                    start_emotion=predicted_emotion,
+                                    target_emotion=desired_emotion,
+                                    playlist=songs_playlist_text,
+                                    user_id=current_user.id)
 
-                        del emotions[i]
-                    else:
-                        total_prediction_sum += predictions_list[i]  # also find the total of the significant emotions
-                                                                     # for the OTHERS bar in home.html
-                        i += 1
+            db.session.add(new_playlist)
+            db.session.commit()  # add to the database
 
-                Songs.delete_object(start_object)
-                Songs.delete_object(target_object)  # delete the temporary objects
+            return jsonify({
+                "success": True,
+                "message": "Playlist generated successfully!",
+                "data": {
+                    "input_text": input_text,
+                    "predicted_emotion": predicted_emotion,
+                    "desired_emotion": desired_emotion,
+                    "songs_playlist": songs_playlist,
+                    "emotions": emotions,
+                    "predictions": predictions_list,
+                    "total_prediction_sum": total_prediction_sum
+                }  # pass our variables to the React frontend as JSON
+            })
 
-                songs_playlist = Songs.get_named_playlist(playlist)  # convert the object list to named list
+        except Exception as e:
+            app.logger.error(f"Error: {e}")
+            return jsonify({
+                "success": False,
+                "message": "Error when generating playlist. Please try again."
+            })
 
-                songs_playlist_text = ', '.join(songs_playlist)  # convert the list into string
-
-                new_playlist = Playlist(prompt=input_text, start_emotion=predicted_emotion, target_emotion=desired_emotion,
-                                        playlist=songs_playlist_text, user_id=current_user.id)
-
-                db.session.add(new_playlist)
-                db.session.commit()  # add to the database
-
-                flash("Playlist generated", category="success")
-
-    return render_template("home.html", user=current_user, input_text=input_text,
-                           predicted_emotion=predicted_emotion, desired_emotion = desired_emotion,
-                           songs_playlist=songs_playlist, emotions=emotions, predictions_list=predictions_list,
-                           total_prediction_sum=total_prediction_sum)  # pass our variables to the frontend (home.html)
-
-
+    return render_template("home.html")
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
