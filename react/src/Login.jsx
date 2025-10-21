@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import "./auth.css"
 
 export default function Login() {
   const [formData, setFormData] = useState({
@@ -43,7 +44,7 @@ export default function Login() {
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
-          setSuccess(data.message || "Account created successfully!");
+          setSuccess(data.message || "Account Logged in successfully!");
           setGeneral("");
           setTimeout(() => (window.location.href = "/"), 1000);
         } else {
@@ -85,7 +86,7 @@ export default function Login() {
 
       {/* Login form */}
       <div className="flex items-center justify-center p-4">
-        <div className="card w-full max-w-md shadow-lg bg-base-100 p-6 mt-6">
+        <div className="auth-form card w-full max-w-md shadow-lg bg-base-100 p-6 mt-6">
           <h1 className="text-2xl font-bold text-center mb-4">Login Page</h1>
           <form className="space-y-4" onSubmit={handleSubmit}>
 

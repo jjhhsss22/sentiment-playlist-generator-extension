@@ -99,7 +99,7 @@ export default function Home() {
               required
             />
 
-    //            {/* Emotions */}  Uncaught TypeError: Cannot read properties of undefined (reading 'length')
+            {/* Emotions */}
             {!predictions.length && (
               <>
                 <h2 className="text-xl font-semibold mt-6 mb-4">

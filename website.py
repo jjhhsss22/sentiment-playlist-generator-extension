@@ -104,6 +104,14 @@ def home():
             db.session.add(new_playlist)
             db.session.commit()  # add to the database
 
+            print(input_text)
+            print(predicted_emotion)
+            print(desired_emotion)
+            print(songs_playlist_text)
+            print(emotions)
+            print(predictions_list)
+            print(total_prediction_sum)
+
             return jsonify({
                 "success": True,
                 "message": "Playlist generated successfully!",
@@ -111,7 +119,7 @@ def home():
                     "input_text": input_text,
                     "predicted_emotion": predicted_emotion,
                     "desired_emotion": desired_emotion,
-                    "songs_playlist": songs_playlist,
+                    "songs_playlist": songs_playlist_text,
                     "emotions": emotions,
                     "predictions": predictions_list,
                     "total_prediction_sum": total_prediction_sum

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import "./auth.css"
 
 export default function Signup() {
   const [formData, setFormData] = useState({
@@ -100,7 +101,7 @@ export default function Signup() {
 
       {/* Signup form */}
       <div className="flex items-center justify-center p-4">
-        <div className="card w-full max-w-md shadow-lg bg-base-100 p-6 mt-6">
+        <div className="auth-form card w-full max-w-md shadow-lg bg-base-100 p-6 mt-6">
           <h1 className="text-2xl font-bold text-center mb-4">Signup Page</h1>
           <form className="space-y-4" onSubmit={handleSubmit}>
 
