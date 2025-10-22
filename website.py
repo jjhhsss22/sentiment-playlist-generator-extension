@@ -89,6 +89,12 @@ def home():
                     total_prediction_sum += predictions_list[i]  # also find the total of the significant emotions
                     i += 1                                       # for the OTHERS bar in home.html
 
+            predictions_list_rounded = [round(p, 1) for p in predictions_list]
+            others_prediction = round(1 - total_prediction_sum, 1)
+
+            print(predictions_list_rounded)
+            print(others_prediction)
+
             Songs.delete_object(start_object)
             Songs.delete_object(target_object)  # delete the temporary objects
 
@@ -104,27 +110,16 @@ def home():
             db.session.add(new_playlist)
             db.session.commit()  # add to the database
 
-            print(input_text)
-            print(predicted_emotion)
-            print(desired_emotion)
-            print(songs_playlist_text)
-            print(emotions)
-            print(predictions_list)
-            print(total_prediction_sum)
-
             return jsonify({
                 "success": True,
                 "message": "Playlist generated successfully!",
-                "data": {
-                    "input_text": input_text,
-                    "predicted_emotion": predicted_emotion,
-                    "desired_emotion": desired_emotion,
-                    "songs_playlist": songs_playlist_text,
-                    "emotions": emotions,
-                    "predictions": predictions_list,
-                    "total_prediction_sum": total_prediction_sum
-                }  # pass our variables to the React frontend as JSON
-            })
+                "input_text": input_text,
+                "desired_emotion": desired_emotion,
+                "songs_playlist": songs_playlist,
+                "predicted_emotions": emotions,
+                "predictions_list": predictions_list_rounded,
+                "others_prediction": others_prediction
+            })  # pass our variables to the React frontend as JSON
 
         except Exception as e:
             app.logger.error(f"Error: {e}")

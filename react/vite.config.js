@@ -14,6 +14,11 @@ export default defineConfig({
     emptyOutDir: true,           // clear previous build
     rollupOptions: {
       input: './src/main.jsx',       // main entry
+      output: {
+        entryFileNames: `assets/[name].js`,
+        chunkFileNames: `assets/[name].js`,
+        assetFileNames: `assets/[name].[ext]`,
+      }
     }
   }
 });
