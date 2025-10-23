@@ -71,17 +71,7 @@ export default function Home() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
-      <video
-        autoPlay
-        loop
-        muted
-        playsInline
-        className="absolute inset-0 w-full h-full object-cover"
-      >
-        <source src="/static/assets/gradient.mp4" type="video/mp4" />
-      </video>
-
+    <div className="min-h-screen bg-base-300 text-base-content">
       {/* Navbar */}
       <nav className="navbar bg-base-200 px-6 py-4 shadow-md">
         <div className="flex-1">
@@ -110,8 +100,8 @@ export default function Home() {
       </div>
 
       {/* Main Section */}
-      <div className="relative z-10 flex items-center justify-center min-h-screen px-6">
-        <div className="w-full max-w-2xl mt-4 bg-base-200/80 backdrop-blur-xl border border-neutral rounded-2xl shadow-2xl p-8">
+      <div className="flex items-center justify-center px-4 pb-12">
+        <div className="w-full max-w-2xl mt-5 bg-base-200/80 backdrop-blur-xl border border-neutral rounded-2xl shadow-2xl p-8">
 
           {/* Input Form */}
           {!predictions.length && (
