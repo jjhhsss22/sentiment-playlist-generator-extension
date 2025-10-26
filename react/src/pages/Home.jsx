@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import "./home.css"
+import {fetchContent} from "../utils/fetchContent.jsx";
 
 export default function Home() {
   const [formData, setFormData] = useState({
@@ -39,28 +39,22 @@ export default function Home() {
     setGeneral("");
     setSuccess("");
 
-    try {
-      const res = await fetch("/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
+    const data = await fetchContent("/api/home", {
+      method: "POST",
+      headers: { "X-Requested-With": "ReactApp" },
+      body: JSON.stringify(formData),
+    });
 
-      const data = await res.json();
-
-      if (data.success) {
-        setPredictions(data.predictions_list || []);
-        setPredictedEmotions(data.predicted_emotions || []);
-        setPredictedOthers(data.others_prediction || 0)
-         setDesiredEmotion(data.desired_emotion || "");
-        setSongs(data.songs_playlist || []);
-       showMessage(setSuccess, "Playlist generated successfully!");
-      } else {
-        showMessage(setGeneral, data.message || "Something went wrong.");
-      }
-    } catch (err) {
-      console.error(err);
-      showMessage(setGeneral, "Server error. Please try again later.");
+    if (data.success) {
+      setPredictions(data.predictions_list || []);
+      setPredictedEmotions(data.predicted_emotions || []);
+      setPredictedOthers(data.others_prediction || 0)
+      setDesiredEmotion(data.desired_emotion || "");
+      setSongs(data.songs_playlist || []);
+      showMessage(setSuccess, "Playlist generated successfully!");
+    } else {
+      console.error("Home API error:", data.message);
+      showMessage(setGeneral, data.message || "Something went wrong.");
     }
   };
 
@@ -85,7 +79,7 @@ export default function Home() {
       {/* Navbar */}
       <nav className="navbar bg-base-200 px-6 py-4 shadow-md">
         <div className="flex-1">
-          <a href="/" className="text-2xl font-bold text-primary">
+          <a href="/home" className="text-2xl font-bold text-primary">
             Home
           </a>
         </div>

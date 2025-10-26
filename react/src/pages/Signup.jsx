@@ -1,5 +1,7 @@
 import React, { useState } from "react";
-import "./auth.css"
+import {fetchContent} from "../utils/fetchContent.jsx";
+import "../styles/auth.css"
+
 
 export default function Signup() {
   const [formData, setFormData] = useState({
@@ -47,27 +49,21 @@ export default function Signup() {
       return;  // stop if frontend validation failed
     }
 
-    try {
-    const res = await fetch("/signup", {
+    const data = await fetchContent("/api/signup", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "X-Requested-With": "ReactApp" },
       body: JSON.stringify(formData),
     });
 
-    const data = await res.json();
-
     if (data.success) {
-      setSuccess(data.message || "Account created successfully!");
+      setSuccess(data.message || "Logged in successfully!");
       setGeneral(""); // clear general errors
-      setTimeout(() => (window.location.href = "/"), 1000);
+      setTimeout(() => (window.location.href = "/home"), 1000);
     } else {
+      console.error("Auth (Signup) API error: ", data.message);
       setGeneral(data.message || "Something went wrong.");
     }
-  } catch (err) {
-      setGeneral("Server error. Please try again later.");
-  }
-};
-
+  };
 
 
   return (
@@ -75,7 +71,7 @@ export default function Signup() {
       {/* Navbar */}
       <nav className="navbar bg-base-100 px-4 shadow">
         <div className="flex-1">
-          <a href="/" className="btn btn-ghost normal-case text-xl">
+          <a href="/home" className="btn btn-ghost normal-case text-xl">
             Home
           </a>
         </div>

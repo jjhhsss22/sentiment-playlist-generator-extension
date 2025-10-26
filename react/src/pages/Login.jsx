@@ -1,5 +1,7 @@
 import React, { useState } from "react";
-import "./auth.css"
+import {fetchContent} from "../utils/fetchContent.jsx";
+import "../styles/auth.css"
+
 
 export default function Login() {
   const [formData, setFormData] = useState({
@@ -18,7 +20,7 @@ export default function Login() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors({});
     setGeneral("");
@@ -35,25 +37,20 @@ export default function Login() {
       return;
     }
 
-    try {
-    fetch("/login", {
+    const data = await fetchContent("/api/login", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "X-Requested-With": "ReactApp" },
       body: JSON.stringify(formData),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) {
-          setSuccess(data.message || "Account Logged in successfully!");
-          setGeneral("");
-          setTimeout(() => (window.location.href = "/"), 1000);
-        } else {
-          setGeneral(data.message || "Something went wrong");
-        }
-      })
-    } catch(err) {
-        setGeneral("Server error. Please try again later.");
-    }
+    });
+
+    if (data.success) {
+      setSuccess(data.message || "Account created successfully!");
+      setGeneral("");
+      setTimeout(() => (window.location.href = "/home"), 1000);
+    } else {
+      console.error("Auth (Login) API error: ", data.message);
+      setGeneral(data.message || "Something went wrong.");
+      }
   };
 
   return (
@@ -61,7 +58,7 @@ export default function Login() {
       {/* Navbar */}
       <nav className="navbar bg-base-100 px-4 shadow">
         <div className="flex-1">
-          <a href="/" className="btn btn-ghost normal-case text-xl">
+          <a href="/home" className="btn btn-ghost normal-case text-xl">
             Home
           </a>
         </div>
