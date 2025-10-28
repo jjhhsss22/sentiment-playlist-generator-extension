@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootswatch@4.5.2/dist/darkly/bootstrap.min.css"
+      crossorigin="anonymous"/>
+
+    <style>
+        .custom {
+            margin-left: 2%
+        }
+
+        .card-container {
+            width: 80%;
+            display: block;
+            text-align: center;
+            align-items: center;
+            margin-left: 10%;
+        }
+
+        .card {
+            margin-bottom: 50px;
+            width: 100%;
+        }
+    </style>
+
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
+        <div class="container-fluid">
+
+            <div class="collapse navbar-collapse" id="navbarColor01">
+
+              <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                  <a class="nav-link text-light" href="{{url_for('home')}}">Home
+                  </a>  <!-- click to go to the home page -->
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link text-light" href="{{url_for('profile')}}">Profile</a>
+                </li>  <!-- refreshes the page -->
+              </ul>
+
+            </div>
+
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                  <a class="nav-link text-light" href="{{url_for('logout')}}">Logout</a>
+                </li>  <!-- click to log out and go to the login page -->
+            </ul>
+
+      </div>
+    </nav>
+
+    <br>
+    <h3 class="custom"> Playlists from the past </h3>  <!-- custom style to better fit our website -->
+    <br>
+
+    <div class="card-container">  <!-- added extra styling along with the provided styling from the bootstrap -->
+        {% for playlist in playlists %}
+            <div>
+                <div class="card">  <!-- added extra styling -->
+                    <div class="card-body">
+                        <h4 class="card-title">Playlist {{ loop.index }}</h4>  <!-- loop.index ins a counter that increments by 1 each time -->
+                        <h6 class="card-subtitle mb-2 text-muted"> {{ playlist.start_emotion }} → {{ playlist.target_emotion }} </h6>
+                        <p class="card-text"> {{ playlist.prompt }} </p>
+
+                        <ul class="list-group list-group-flush">
+                            {% for song in playlist.playlist %}  <!-- loop through the playlist -->
+                                <li class="list-group-item"> {{ song }} </li> <!-- each song becomes a list item -->
+                            {% endfor %}
+                        </ul>
+
+                        <div class="card-footer text-muted">
+                            {{ playlist.creation_date}}
+                    </div>
+                </div>
+            </div>
+
+        {% endfor %}
+        </div>
+    </div>
+
+
+
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+crossorigin="anonymous"></script>
+
+</body>
+</html>

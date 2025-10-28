@@ -16,10 +16,10 @@ class User(db.Model, UserMixin):
 
 class Playlist(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    prompt = db.Column(db.String(300), nullable=False)
+    prompt = db.Column(db.Text, nullable=False)
     start_emotion = db.Column(db.String(50), nullable=False)
     target_emotion = db.Column(db.String(50), nullable=False)
-    playlist = db.Column(db.String(300))  # playlist will just be one long string with songs separated by commas
+    playlist = db.Column(db.Text, nullable=False)  # playlist will just be one long string with songs separated by commas
     playlist_creation_date = db.Column(db.Date, default=date.today, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # foreign key from User
 
