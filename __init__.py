@@ -1,7 +1,7 @@
 from flask import Flask, render_template, current_app
 from flask_login import LoginManager
 import pymysql
-from dbmodels import db
+from database.dbmodels import db
 
 
 def create_app():
@@ -15,7 +15,7 @@ def create_app():
     app.register_blueprint(api_profile_bp, url_prefix='/api')
     app.register_blueprint(api_auth_bp, url_prefix='/api')
     app.register_blueprint(api_home_bp, url_prefix='/api')
-    app.register_blueprint(website_bp)
+    app.register_blueprint(website_bp)  # register flask blueprints from api's and website
 
     pymysql.install_as_MySQLdb()  # initialise pymysql
 
@@ -31,7 +31,7 @@ def create_app():
 
     @login_manager.unauthorized_handler
     def unauthorized():
-        current_app.logger.warning(f"Unauthorized access: 401")
+        current_app.logger.warning(f"Unauthorised access: 401")
 
         return render_template("unknown.html"), 401
 
@@ -41,7 +41,7 @@ def create_app():
         return render_template("unknown.html"), 404
 
 
-    from dbmodels import User
+    from database.dbmodels import User
 
     @login_manager.user_loader
     def load_user(user_id):

@@ -1,6 +1,6 @@
 from flask import jsonify, request, Blueprint, current_app, render_template
 from flask_login import login_required, current_user
-from dbmodels import Playlist
+from database.dbmodels import Playlist
 
 api_profile_bp = Blueprint('api_profile', __name__)
 

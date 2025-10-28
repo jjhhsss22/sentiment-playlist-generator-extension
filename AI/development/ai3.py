@@ -1,4 +1,3 @@
-# import necessary modules
 import pandas as pd
 import neattext.functions as nt
 from nltk.stem.porter import PorterStemmer

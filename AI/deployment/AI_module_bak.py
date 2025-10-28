@@ -7,7 +7,7 @@ import numpy as np
 
 
 # sentiment analysis model
-sentiment_model = tf.keras.models.load_model("AI/model/sentiment_model3.keras", compile=False)
+sentiment_model = tf.keras.models.load_model("../model/sentiment_model3.keras", compile=False)
 
 sentiment_model.compile(optimizer='adam',
                         loss='categorical_crossentropy',
@@ -31,7 +31,7 @@ def stem(sw_removed_text):
 
 # vectorisation
 def vectorise(stemmed_text):
-    count_vectorizer = joblib.load("AI/cv/count_vectorizer3.joblib")
+    count_vectorizer = joblib.load("../development/cv/count_vectorizer3.joblib")
 
     processed_text = count_vectorizer.transform([stemmed_text])
     return processed_text

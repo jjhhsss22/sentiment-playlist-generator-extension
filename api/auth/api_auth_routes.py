@@ -2,8 +2,8 @@ from flask import request, jsonify, Blueprint, current_app, render_template
 from flask_login import login_user
 from werkzeug.security import generate_password_hash, check_password_hash
 
-from dbmodels import db, User
-from Userlogin import is_valid_username, is_valid_password
+from database.dbmodels import db, User
+from api.auth.auth_verification import is_valid_username, is_valid_password
 
 
 api_auth_bp = Blueprint('api_auth', __name__)
