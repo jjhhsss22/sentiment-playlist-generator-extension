@@ -1,8 +1,8 @@
 from flask import request, jsonify, Blueprint, current_app, render_template
 from flask_login import login_user
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import check_password_hash
 
-from database.dbmodels import db, User
+from database.repository_interface import create_user, save, find_user_by_email
 from api.auth.auth_verification import is_valid_username, is_valid_password
 
 
@@ -22,7 +22,9 @@ def signup():
     password = data.get('password')
     confirm_password = data.get('confirmPassword')  # id from the HTML file
 
-    if User.query.filter_by(email=email).first():
+    exists = find_user_by_email(email)
+
+    if exists:
         return jsonify({"success": False, "message": "Email already linked to an account."})
 
     elif not is_valid_username(username):
@@ -32,11 +34,10 @@ def signup():
         return jsonify({"success": False, "message": "Invalid password or mismatch."})
 
     else:
-        new_user = User(email=email,
-                        username=username,
-                        password=generate_password_hash(password, method='pbkdf2:sha256'))
-        db.session.add(new_user)
-        db.session.commit()  # add the values to the database a new user
+        new_user = create_user(email,
+                               username,
+                               password)
+        save(new_user)
 
         login_user(new_user, remember=True)  # user session created with LoginManager
 
@@ -57,7 +58,7 @@ def login():
     username = data.get('username')
     password = data.get('password')
 
-    user = User.query.filter_by(email=email).first()
+    user = find_user_by_email(email)
 
     if not user:  # verification
         return jsonify({"success": False, "message": "Invalid email"})

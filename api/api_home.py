@@ -3,11 +3,10 @@ from flask_login import login_required, current_user
 
 from tensorflow.errors import InvalidArgumentError
 
-from database.dbmodels import db, Playlist
-from AI.deployment.service_interface import run_prediction_pipeline
-from music.music_module import Songs, get_quadrant_object
-import music.music_object_database
-
+from database.repository_interface import create_playlist, save
+from AI.deployment.ai_service_interface import run_prediction_pipeline
+from music.music_service_interface import generate_playlist_pipeline
+import music.music_logic.music_object_database
 
 api_home_bp = Blueprint('api_home', __name__)
 
@@ -24,60 +23,46 @@ def home():
     input_text = data.get("text", "").strip()
     desired_emotion = data.get("emotion", None)
 
-    if not input_text or not desired_emotion:
-        return jsonify({
-            "success": False,
-            "message": "Please fill out all forms for a playlist to be generated"
-        })
-
     try:
         try:
-            results = run_prediction_pipeline(input_text, desired_emotion)  # 2D array with probabilities of emotions
+            ai_results = run_prediction_pipeline(input_text, desired_emotion)  # 2D array with probabilities of emotions
         except InvalidArgumentError:
             return jsonify({
                 "success": False,
                 "message": "Please submit text in full sentences"
             })
 
-        predictions_list = results["predictions_list"]
-        predicted_emotions = results["predicted_emotions"]
-        likely_emotion = results["likely_emotion"]
-        starting_coord = results["starting_coord"]
-        target_coord = results["target_coord"]
-        others_probability = results["others_probability"]
+        predictions_list = ai_results["predictions_list"]
+        predicted_emotions = ai_results["predicted_emotions"]
+        likely_emotion = ai_results["likely_emotion"]
+        starting_coord = ai_results["starting_coord"]
+        target_coord = ai_results["target_coord"]
+        others_probability = ai_results["others_probability"]
 
-        start_object = get_quadrant_object("start", starting_coord)
-        target_object = get_quadrant_object("target", target_coord)
+        playlist_results = generate_playlist_pipeline(starting_coord, target_coord)
 
-        playlist = start_object.find_playlist(target_object)
+        playlist_list = playlist_results["playlist_list"]
+        playlist_text = playlist_results["playlist_text"]
 
-        if len(playlist) <= 2:
+        if len(playlist_list) <= 2:
             return jsonify({
                 "success": False,
                 "message": "No available songs with the provided emotions. You are already near your desired emotion!"
             })
 
-        Songs.delete_object(start_object)
-        Songs.delete_object(target_object)  # delete the temporary objects
-
-        songs_playlist = Songs.get_named_playlist(playlist)  # convert the object list to named list
-        songs_playlist_text = ', '.join(songs_playlist)  # convert the list into string
-
-        new_playlist = Playlist(prompt=input_text,
-                                start_emotion=likely_emotion,
-                                target_emotion=desired_emotion,
-                                playlist=songs_playlist_text,
-                                user_id=current_user.id)
-
-        db.session.add(new_playlist)
-        db.session.commit()  # add to the database
+        new_playlist = create_playlist(input_text,
+                                       likely_emotion,
+                                       desired_emotion,
+                                       playlist_text,
+                                       current_user.id)
+        save(new_playlist)  # call to repository interface
 
         return jsonify({
             "success": True,
             "message": "Playlist generated successfully!",
             "input_text": input_text,
             "desired_emotion": desired_emotion,
-            "songs_playlist": songs_playlist,
+            "songs_playlist": playlist_list,
             "predicted_emotions": predicted_emotions,
             "predictions_list": predictions_list,
             "others_prediction": others_probability

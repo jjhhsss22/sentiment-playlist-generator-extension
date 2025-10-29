@@ -13,6 +13,7 @@ export default function Home() {
   const [desiredEmotion, setDesiredEmotion] = useState("");
   const [songs, setSongs] = useState([]);
 
+  const [errors, setErrors] = useState({});
   const [general, setGeneral] = useState("");
   const [success, setSuccess] = useState("");
   const [isVisible, setIsVisible] = useState(false);
@@ -38,6 +39,16 @@ export default function Home() {
     e.preventDefault();
     setGeneral("");
     setSuccess("");
+
+    const newErrors = {};
+
+    if (!formData.text) newErrors.text = "you need to type something in";
+    if (!formData.emotion) newErrors.emotion = "you need to select an emotion";
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
 
     const data = await fetchContent("/api/home", {
       method: "POST",
@@ -123,8 +134,10 @@ export default function Home() {
                     onChange={handleChange}
                     placeholder="Write a few sentences about your day..."
                     className="textarea textarea-bordered w-full h-28 rounded-xl bg-base-100 text-base-content focus:ring-1 focus:ring-primary resize-none"
-                    required
                   />
+                  {errors.text && (
+                    <span className="text-red-500 text-sm">{errors.text}</span>
+                  )}
                 </div>
 
                 {/* Emotion Options */}
@@ -188,6 +201,9 @@ export default function Home() {
                       ))}
                     </div>
                   </div>
+                  {errors.emotion && (
+                    <span className="text-red-500 text-sm">{errors.emotion}</span>
+                  )}
                 </div>
 
                 {/* Submit */}

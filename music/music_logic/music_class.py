@@ -12,45 +12,31 @@ class Songs:
         self.artist = artist
         self.coord = coord
 
-    def getCoord(self):
+    def getCoord(self) -> tuple:
         return self.coord
 
-    def getQuadrantList(self):  # list of songs in that quadrant
-        x = self.getCoord()[0]
-        y = self.getCoord()[1]
+    def getQuadrantList(self) -> list:  # list of songs in that quadrant
+        x, y = self.getCoord()
 
-        if x > 0 and y > 0:  # 1st
-            quad_list = Songs.first_list
-            return quad_list
+        if x > 0 and y > 0: return Songs.first_list  # 1st
+        elif x < 0 and y > 0: return Songs.second_list # 2nd
+        elif x < 0 and y < 0: return Songs.third_list  # 3rd
+        elif x > 0 and y < 0: return Songs.fourth_list # 4th
 
-        elif x < 0 and y > 0:  # 2nd
-            quad_list = Songs.second_list
-            return quad_list
-
-        elif x < 0 and y < 0:  # 3rd
-            quad_list = Songs.third_list
-            return quad_list
-
-        elif x > 0 and y < 0:  # 4th
-            quad_list = Songs.fourth_list
-            return quad_list
-
-        else:
-            return None
+        return []
 
     def getDelta(self, target):  # finds the difference in x and y between two points
         x = self.getCoord()[0]
         y = self.getCoord()[1]
 
-        target_x = target.getCoord()[0]
-        target_y = target.getCoord()[1]
+        target_x, target_y = target.getCoord()
 
         delta_x = target_x - x
         delta_y = target_y - y
 
         return delta_x, delta_y
 
-    def calc(self, target, minimum_songs=None):  # the angle algorithm
+    def calc(self, target, minimum_songs=None) -> list:  # the angle algorithm
         if minimum_songs is None:
             minimum_songs = [self]
 
@@ -83,9 +69,6 @@ class Songs:
         if not filtered_list:  # if the list is empty - meaning no more songs in the same quadrant within the range
             return minimum_songs  # returns the list made for the quadrant it's in
 
-        minimum_song = None
-        minimum_distance = float('inf')
-
         # finds the minimum Euclidean distance
         minimum_song = min(
             filtered_list,
@@ -104,12 +87,9 @@ class Songs:
             return minimum_songs
 
     def transition(self, target):  # when an axis is met and need to transition to another quadrant
-        x = self.getCoord()[0]
-        y = self.getCoord()[1]
 
-        transition_list = (
-                Songs.first_list + Songs.second_list + Songs.third_list + Songs.fourth_list
-        )
+        transition_list = Songs.first_list + Songs.second_list + Songs.third_list + Songs.fourth_list
+
         transition_list = [s for s in transition_list if s != self]
 
         delta_x, delta_y = self.getDelta(target)
@@ -153,8 +133,7 @@ class Songs:
             playlist += [s for s in self.calc(target) if s not in playlist]
 
         if target in playlist:  # if target is in the same quadrant as the starting point
-                                # then no need for transition
-            return playlist
+            return playlist     # then no need for transition
 
         current_song = playlist[-1]  # last song in the current playlist
         next_song = current_song.transition(target)  # next song after transitioning to another quadrant
@@ -169,43 +148,18 @@ class Songs:
 
     @classmethod
     def get_named_playlist(cls, objects_list):  # returns the song names in the playlist
-        playlist = []
-
-        index = 0
-
-        while index < len(objects_list):  # remove the starting and target objects
-            if objects_list[index].artist is None:
-                objects_list.pop(index)
-            else:
-                index += 1
-
-        for objects in objects_list:
-            playlist.append(objects.title + ' - ' + objects.artist)
-
-        return playlist
+        named_playlist = [f"{o.title} - {o.artist}" for o in objects_list if o.artist]
+        return named_playlist
 
 
     @classmethod
     def delete_object(cls, obj):
-        x = obj.getCoord()[0]
-        y = obj.getCoord()[1]
+        x, y = obj.getCoord()
 
-        if x > 0 and y > 0:
-            if obj in Songs.first_list:
-                Songs.first_list.remove(obj)
-
-        elif x < 0 and y > 0:
-            if obj in Songs.second_list:
-                Songs.second_list.remove(obj)
-
-        elif x < 0 and y < 0:
-            if obj in Songs.third_list:
-                Songs.third_list.remove(obj)
-
-        elif x > 0 and y < 0:
-            if obj in Songs.fourth_list:
-                Songs.fourth_list.remove(obj)
-
+        if x > 0 and y > 0 and obj in Songs.first_list: Songs.first_list.remove(obj)
+        elif x < 0 and y > 0 and obj in Songs.second_list: Songs.second_list.remove(obj)
+        elif x < 0 and y < 0 and obj in Songs.third_list: Songs.third_list.remove(obj)
+        elif x > 0 and y < 0 and obj in Songs.fourth_list: Songs.fourth_list.remove(obj)
 
 
 class FirstQuadrant(Songs):
@@ -241,11 +195,8 @@ class FourthQuadrant(Songs):
 
 
 def get_quadrant_object(title, coord):  # for the starting and target objects
-    if coord[0] > 0 and coord[1] > 0:
-        return FirstQuadrant(title, None, coord)
-    elif coord[0] < 0 < coord[1]:
-        return SecondQuadrant(title, None, coord)
-    elif coord[0] < 0 and coord[1] < 0:
-        return ThirdQuadrant(title, None, coord)
-    else:
-        return FourthQuadrant(title, None, coord)
+    x, y = coord
+    if x > 0 and y > 0: return FirstQuadrant(title, None, coord)
+    if x < 0 < y: return SecondQuadrant(title, None, coord)
+    if x < 0 and y < 0: return ThirdQuadrant(title, None, coord)
+    return FourthQuadrant(title, None, coord)

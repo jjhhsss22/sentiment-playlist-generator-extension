@@ -1,6 +1,12 @@
 from AI.deployment.model_prediction import predict, get_predicted_emotion, get_starting_coord, get_target_coord, EMOTIONS
 from AI.deployment.utils import to_list, round_list
 
+'''
+turned ai module "microservice-ready" in case I need to scale ml model and want to run development on a separate server
+so that it can be improved and reused.
+
+can also turn it asynchronous using another server
+'''
 
 # filter out insignificant emotions
 def calc_others_probability(array: list):

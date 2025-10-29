@@ -1,4 +1,4 @@
-from music.music_module import FirstQuadrant, SecondQuadrant, ThirdQuadrant, FourthQuadrant
+from music.music_logic.music_class import FirstQuadrant, SecondQuadrant, ThirdQuadrant, FourthQuadrant
 
 # 25 each add songs
 
