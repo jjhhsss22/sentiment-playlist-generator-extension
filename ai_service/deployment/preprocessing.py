@@ -17,7 +17,7 @@ def stem(text: str) -> str:
 
 #  vectorisation
 def vectorise(stemmed_text: str):
-    cv = joblib.load("AI/development/cv/count_vectorizer3.joblib")
+    cv = joblib.load("cv/count_vectorizer3.joblib")
     return cv.transform([stemmed_text])
 
 # combined preprocessing pipeline

@@ -1,4 +1,4 @@
-from music.music_logic.music_class import Songs, get_quadrant_object
+from music_logic.music_class import Songs, get_quadrant_object
 
 def generate_playlist_pipeline(start_coord, target_coord):
     start_object = get_quadrant_object("start", start_coord)
@@ -13,6 +13,6 @@ def generate_playlist_pipeline(start_coord, target_coord):
     playlist_text = ', '.join(playlist_list)  # convert the list into string separated by commas
 
     return {
-            "playlist_list": playlist_list,
-            "playlist_text": playlist_text,
+            "list": playlist_list,
+            "text": playlist_text,
         }

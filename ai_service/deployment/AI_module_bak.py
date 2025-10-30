@@ -31,7 +31,7 @@ def stem(sw_removed_text):
 
 # vectorisation
 def vectorise(stemmed_text):
-    count_vectorizer = joblib.load("../development/cv/count_vectorizer3.joblib")
+    count_vectorizer = joblib.load("../cv/count_vectorizer3.joblib")
 
     processed_text = count_vectorizer.transform([stemmed_text])
     return processed_text

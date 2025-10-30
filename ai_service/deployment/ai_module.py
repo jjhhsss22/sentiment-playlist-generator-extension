@@ -1,5 +1,7 @@
-from AI.deployment.model_prediction import predict, get_predicted_emotion, get_starting_coord, get_target_coord, EMOTIONS
-from AI.deployment.utils import to_list, round_list
+from flask import Flask, request, jsonify
+
+from deployment.model_prediction import predict, get_predicted_emotion, get_starting_coord, get_target_coord, EMOTIONS
+from deployment.utils import to_list, round_list
 
 '''
 turned ai module "microservice-ready" in case I need to scale ml model and want to run development on a separate server

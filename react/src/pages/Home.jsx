@@ -297,7 +297,7 @@ export default function Home() {
               </ul>
 
               <div className="text-right mt-6">
-                <a class="text-blue-600 after:content-['_↗'] hover:underline" href="/">
+                <a class="text-blue-600 after:content-['_↗'] hover:underline" href="/home">
                   🎧 Make another playlist
                 </a>
               </div>

@@ -1,10 +1,10 @@
 import numpy as np
-from AI.deployment.preprocessing import preprocess
+from deployment.preprocessing import preprocess
 from tensorflow.errors import InvalidArgumentError
 import tensorflow as tf
 
 # Load model once at import time (relative to the CWD)
-sentiment_model = tf.keras.models.load_model("AI/model/sentiment_model3.keras", compile=False)
+sentiment_model = tf.keras.models.load_model("model/sentiment_model3.keras", compile=False)
 
 sentiment_model.compile(optimizer='adam',
                         loss='categorical_crossentropy',

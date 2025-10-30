@@ -40,7 +40,7 @@ count_vectorizer = CountVectorizer()  # count vectorizer instantiation
 
 Filtered_text = count_vectorizer.fit_transform(Filtered_text)  # a count_vectorizer will be made specific to our dataset
 
-joblib.dump(count_vectorizer, "cv/count_vectorizer3.joblib")  # save our count vectorizer
+joblib.dump(count_vectorizer, "../cv/count_vectorizer3.joblib")  # save our count vectorizer
 
 
 # Splitting

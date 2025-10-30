@@ -1,14 +1,13 @@
 from flask import request, jsonify, Blueprint, current_app, render_template
+import requests
 from flask_login import login_required, current_user
 
-from tensorflow.errors import InvalidArgumentError
-
 from database.repository_interface import create_playlist, save
-from AI.deployment.ai_service_interface import run_prediction_pipeline
-from music.music_service_interface import generate_playlist_pipeline
-import music.music_logic.music_object_database
 
 api_home_bp = Blueprint('api_home', __name__)
+
+AI_SERVER_URL = "http://localhost:8001/predict"
+MUSIC_SERER_URL = "http://localhost:8002/playlist"
 
 @api_home_bp.route('/home', methods=['GET', 'POST'])
 @login_required
@@ -16,7 +15,7 @@ def home():
     if request.headers.get("X-Requested-With") != "ReactApp":
         current_app.logger.warning(f"Forbidden access: 403")
 
-        return render_template("unknown.html"), 403
+        return render_template("unknown.html")
 
     data = request.get_json()
 
@@ -24,25 +23,60 @@ def home():
     desired_emotion = data.get("emotion", None)
 
     try:
-        try:
-            ai_results = run_prediction_pipeline(input_text, desired_emotion)  # 2D array with probabilities of emotions
-        except InvalidArgumentError:
-            return jsonify({
-                "success": False,
-                "message": "Please submit text in full sentences"
-            })
+        ai_response = requests.post(AI_SERVER_URL, json={
+            "API-Requested-With": "Home Gateway",
+            "text": input_text,
+            "emotion": desired_emotion
+        }, timeout=10)
 
-        predictions_list = ai_results["predictions_list"]
-        predicted_emotions = ai_results["predicted_emotions"]
-        likely_emotion = ai_results["likely_emotion"]
-        starting_coord = ai_results["starting_coord"]
-        target_coord = ai_results["target_coord"]
-        others_probability = ai_results["others_probability"]
+        if ai_response.status_code != 200:
+            return jsonify({"success": False, "message": "failed to connect to ai_service server "})
 
-        playlist_results = generate_playlist_pipeline(starting_coord, target_coord)
+        ai_results = ai_response.json()
 
-        playlist_list = playlist_results["playlist_list"]
-        playlist_text = playlist_results["playlist_text"]
+        print(ai_results)
+
+        if ai_results.get("forbidden", False):
+            current_app.logger.warning(f"Forbidden access to ai server: 403")
+            return render_template('unknown.html')
+
+        if not ai_results.get("success"):
+            return jsonify(ai_results)
+
+        ai_data = ai_results["result"]
+        predictions_list = ai_data["predictions_list"]
+        predicted_emotions = ai_data["predicted_emotions"]
+        likely_emotion = ai_data["likely_emotion"]
+        starting_coord = ai_data["starting_coord"]
+        target_coord = ai_data["target_coord"]
+        others_probability = ai_data["others_probability"]
+
+    except Exception as e:
+        current_app.logger.error(f"Error: {e}")
+        return jsonify({
+            "success": False,
+            "message": "Error when predicting emotion. Please try again later."
+        })
+
+    try:
+        music_response = requests.post(MUSIC_SERER_URL, json={
+            "API-Requested-With": "Home Gateway",
+            "starting_coord": starting_coord,
+            "target_coord": target_coord,
+        })
+
+        if music_response.status_code != 200:
+            return jsonify({"success": False, "message": "failed to connect to music server "})
+
+        music_results = music_response.json()
+
+        if music_results.get("forbidden", False):
+            current_app.logger.warning(f"Forbidden access to ai server: 403")
+            return render_template('unknown.html')
+
+        music_data = music_results["result"]
+        playlist_list = music_data["list"]
+        playlist_text = music_data["text"]
 
         if len(playlist_list) <= 2:
             return jsonify({
@@ -60,7 +94,6 @@ def home():
         return jsonify({
             "success": True,
             "message": "Playlist generated successfully!",
-            "input_text": input_text,
             "desired_emotion": desired_emotion,
             "songs_playlist": playlist_list,
             "predicted_emotions": predicted_emotions,
@@ -72,5 +105,5 @@ def home():
         current_app.logger.error(f"Error: {e}")
         return jsonify({
             "success": False,
-            "message": "Error when generating playlist. Please try again."
+            "message": "Error when generating playlist. Please try again later."
         })
