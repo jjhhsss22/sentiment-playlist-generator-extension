@@ -2,6 +2,13 @@ import React, { useEffect, useState } from "react";
 import {fetchContent} from "../utils/fetchContent.jsx";
 
 export default function Profile() {
+  const token = localStorage.getItem("access_token");
+
+  if (!token) {
+    window.location.href = "/login";
+    return;
+  }
+
   const [general, setGeneral] = useState("");
   const [success, setSuccess] = useState("");
   const [isVisible, setIsVisible] = useState(false);
@@ -21,13 +28,15 @@ export default function Profile() {
   useEffect(() => {
     const fetchData = async () => {
       const data = await fetchContent("/api/profile", {
-        headers: { "X-Requested-With": "ReactApp" },
+        headers: { "X-Requested-With": "ReactApp",
+                 "Authorization": `Bearer ${token}`},
       });
 
+      console.log("Fetched playlists:", data.playlists);
       setLoading(false);
 
       if (data.success) {
-        setPlaylists(data);
+        setPlaylists(data.playlists);
         showMessage(setSuccess, "Playlists fetched successfully");
       } else {
         console.error("Profile API error:", data.message);
@@ -48,7 +57,13 @@ export default function Profile() {
         </div>
         <div className="flex-none space-x-4">
           <a href="/profile" className="hover:text-primary font-medium">Profile</a>
-          <a href="/logout" className="hover:text-primary font-medium">Logout</a>
+          <a href="/logout" className="hover:text-primary font-medium"
+          onClick={(e) => {
+          e.preventDefault();
+          localStorage.removeItem("access_token");
+          window.location.href = "/login";
+          }}
+          >Logout</a>
         </div>
       </nav>
 

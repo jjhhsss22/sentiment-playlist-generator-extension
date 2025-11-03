@@ -56,6 +56,8 @@ export default function Signup() {
     });
 
     if (data.success) {
+      localStorage.setItem("access_token", data.access_token);
+
       setSuccess(data.message || "Logged in successfully!");
       setGeneral(""); // clear general errors
       setTimeout(() => (window.location.href = "/home"), 1000);

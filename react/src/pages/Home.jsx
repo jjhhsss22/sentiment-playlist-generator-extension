@@ -2,6 +2,13 @@ import React, { useState } from "react";
 import {fetchContent} from "../utils/fetchContent.jsx";
 
 export default function Home() {
+  const token = localStorage.getItem("access_token");
+
+  if (!token) {
+    window.location.href = "/login";
+    return;
+  }
+
   const [formData, setFormData] = useState({
     text: "",
     emotion: "",
@@ -50,9 +57,12 @@ export default function Home() {
       return;
     }
 
+    const token = localStorage.getItem("access_token");
+
     const data = await fetchContent("/api/home", {
       method: "POST",
-      headers: { "X-Requested-With": "ReactApp" },
+      headers: { "X-Requested-With": "ReactApp",
+                 "Authorization": `Bearer ${token}`},
       body: JSON.stringify(formData),
     });
 
@@ -96,7 +106,13 @@ export default function Home() {
         </div>
         <div className="flex-none space-x-4">
           <a href="/profile" className="hover:text-primary font-medium">Profile</a>
-          <a href="/logout" className="hover:text-primary font-medium">Logout</a>
+          <a href="/logout" className="hover:text-primary font-medium"
+          onClick={(e) => {
+          e.preventDefault(); // stop default navigation first
+          localStorage.removeItem("access_token"); // remove JWT
+          window.location.href = "/login"; // redirect manually
+          }}
+          >Logout</a>
         </div>
       </nav>
 

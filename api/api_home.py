@@ -1,21 +1,22 @@
 from flask import request, jsonify, Blueprint, current_app, render_template
 import requests
-from flask_login import login_required, current_user
-
-from database.repository_interface import create_playlist, save
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 api_home_bp = Blueprint('api_home', __name__)
 
-AI_SERVER_URL = "http://localhost:8001/predict"
-MUSIC_SERER_URL = "http://localhost:8002/playlist"
+AI_SERVER_URL = "http://127.0.0.1:8001/predict"
+MUSIC_SERER_URL = "http://127.0.0.1:8002/playlist"
+DB_API_URL = "http://127.0.0.1:8003/new-playlist"
 
 @api_home_bp.route('/home', methods=['GET', 'POST'])
-@login_required
+@jwt_required()
 def home():
     if request.headers.get("X-Requested-With") != "ReactApp":
         current_app.logger.warning(f"Forbidden access: 403")
 
         return render_template("unknown.html")
+
+    user_id = int(get_jwt_identity())
 
     data = request.get_json()
 
@@ -25,16 +26,17 @@ def home():
     try:
         ai_response = requests.post(AI_SERVER_URL, json={
             "API-Requested-With": "Home Gateway",
+            # no need for IP whitelisting or internal secret key
+            # because api servers only accessible from this gateway server
             "text": input_text,
             "emotion": desired_emotion
-        }, timeout=10)
+        })
 
         if ai_response.status_code != 200:
-            return jsonify({"success": False, "message": "failed to connect to ai_service server "})
+            current_app.logger.error(f"Error status code: {ai_response.status_code}")
+            return jsonify({"success": False, "message": "failed to connect to ai server "})
 
         ai_results = ai_response.json()
-
-        print(ai_results)
 
         if ai_results.get("forbidden", False):
             current_app.logger.warning(f"Forbidden access to ai server: 403")
@@ -66,6 +68,7 @@ def home():
         })
 
         if music_response.status_code != 200:
+            current_app.logger.error(f"Error status code: {music_response.status_code}")
             return jsonify({"success": False, "message": "failed to connect to music server "})
 
         music_results = music_response.json()
@@ -84,12 +87,34 @@ def home():
                 "message": "No available songs with the provided emotions. You are already near your desired emotion!"
             })
 
-        new_playlist = create_playlist(input_text,
-                                       likely_emotion,
-                                       desired_emotion,
-                                       playlist_text,
-                                       current_user.id)
-        save(new_playlist)  # call to repository interface
+    except Exception as e:
+        current_app.logger.error(f"Error: {e}")
+        return jsonify({
+            "success": False,
+            "message": "Error when generating playlist. Please try again later."
+            })
+
+    try:
+        db_response = requests.post(
+            DB_API_URL,
+            json={
+                "API-Requested-With": "Home Gateway",
+                "text": input_text,
+                "likely_emotion": likely_emotion,
+                "desired_emotion": desired_emotion,
+                "playlist_text": playlist_text,
+                "user_id": user_id
+            })
+
+        if db_response.status_code != 201:
+            current_app.logger.error(f"Error status code: {db_response.status_code}")
+            return jsonify({"success": False, "message": "failed to connect to db server "}), 500
+
+        db_results = db_response.json()
+
+        if not db_results.get("success"):
+            current_app.logger.error("Playlist creation failed in db server")
+            return jsonify(db_results), 400
 
         return jsonify({
             "success": True,
@@ -99,11 +124,11 @@ def home():
             "predicted_emotions": predicted_emotions,
             "predictions_list": predictions_list,
             "others_prediction": others_probability
-        })  # pass our variables to the React frontend as JSON
+        })
 
     except Exception as e:
         current_app.logger.error(f"Error: {e}")
         return jsonify({
             "success": False,
-            "message": "Error when generating playlist. Please try again later."
+            "message": "Error when saving playlist. Please try again later."
         })

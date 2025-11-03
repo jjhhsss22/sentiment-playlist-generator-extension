@@ -1,35 +1,41 @@
 from flask import jsonify, request, Blueprint, current_app, render_template
-from flask_login import login_required, current_user
-from database.dbmodels import Playlist
+import requests
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 api_profile_bp = Blueprint('api_profile', __name__)
 
+DB_API_URL = "http://127.0.0.1:8003/playlist"
+
 @api_profile_bp.route('/profile', methods=['GET'])
-@login_required
+@jwt_required()
 def api_profile():
     if request.headers.get("X-Requested-With") != "ReactApp":
         current_app.logger.warning(f"Forbidden access: 403")
-
         return render_template("unknown.html"), 403
 
+    user_id = int(get_jwt_identity())
+
     try:
-        playlists = Playlist.query.filter_by(user_id=current_user.id).all()  # query the database for all playlists
-                                                                             # created by the current user and store it in a list
-        playlist_data =[]
+        response = requests.post(
+            DB_API_URL,
+            json={
+                "API-Requested-With": "Home Gateway",
+                "user_id": user_id
+            })
 
-        for playlist in playlists:
-            playlist_data.append({
-                "prompt": playlist.prompt,
-                "start_emotion": playlist.start_emotion,
-                "target_emotion": playlist.target_emotion,
-                "playlist": playlist.playlist.split(','),  # convert the comma-separated string to a list
-                "creation_date": playlist.playlist_creation_date
-            })  # for each playlist, create a different list with all its information in a dictionary
+        if response.status_code != 200:
+            current_app.logger.error(f"Error status code: {response.status_code}")
+            return jsonify({"success": False, "message": "failed to connect to db server "}), 500
 
-        playlist_data.reverse()  # reverse the list so that the most recent playlists are at the top of the page
+        results = response.json()
 
-        return jsonify(playlist_data)
+        if not results.get("success"):
+            return jsonify(results), 400
+
+        playlists_data = results.get("playlists", [])
+
+        return jsonify({"success": True, "playlists": playlists_data}), 200
 
     except Exception as e:
         current_app.logger.error(f"Error: {e}")
-        return jsonify({"success": "false", "message": "Database error" })
+        return jsonify({"success": False, "message": "Error when retrieving playlists" }), 500

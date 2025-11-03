@@ -44,6 +44,8 @@ export default function Login() {
     });
 
     if (data.success) {
+      localStorage.setItem("access_token", data.access_token);
+
       setSuccess(data.message || "Account created successfully!");
       setGeneral("");
       setTimeout(() => (window.location.href = "/home"), 1000);
