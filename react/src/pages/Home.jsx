@@ -1,12 +1,13 @@
 import React, { useState } from "react";
-import {fetchContent} from "../utils/fetchContent.jsx";
+import { fetchContent } from "../utils/fetchContent.jsx";
+import { showMessage } from "../utils/showMessage.jsx";
 
 export default function Home() {
   const token = localStorage.getItem("access_token");
 
   if (!token) {
-    window.location.href = "/login";
-    return;
+    window.location.replace("/login");
+    return null;
   }
 
   const [formData, setFormData] = useState({
@@ -23,16 +24,6 @@ export default function Home() {
   const [errors, setErrors] = useState({});
   const [general, setGeneral] = useState("");
   const [success, setSuccess] = useState("");
-  const [isVisible, setIsVisible] = useState(false);
-
-  const showMessage = (setter, message, duration = 3000, fadeDuration = 500) => {
-    setter(message);
-    setIsVisible(true);
-
-    setTimeout(() => setIsVisible(false), duration);
-
-    setTimeout(() => setter(""), duration + fadeDuration);
-  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

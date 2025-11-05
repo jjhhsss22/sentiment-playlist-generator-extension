@@ -31,3 +31,8 @@ def profile():
 @website_bp.route('/logout')
 def logout():
     return render_template("login.html")
+
+# @website_bp.route('/', defaults={'path': ''})
+# @website_bp.route('/<path:path>')
+# def index(path):
+#     return render_template("index.html")

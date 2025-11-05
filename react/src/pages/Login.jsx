@@ -1,9 +1,26 @@
-import React, { useState } from "react";
-import {fetchContent} from "../utils/fetchContent.jsx";
+import React, { useState, useEffect } from "react";
+import { fetchContent } from "../utils/fetchContent.jsx";
+import { showMessage } from "../utils/showMessage.jsx";
 import "../styles/auth.css"
 
 
 export default function Login() {
+  useEffect(() => {
+    const handlePageShow = (event) => {
+      if (event.persisted) {
+        setFormData({
+          email: "",
+          username: "",
+          password: "",
+          confirmPassword: "",
+        });
+      }
+    };
+
+    window.addEventListener("pageshow", handlePageShow);
+    return () => window.removeEventListener("pageshow", handlePageShow);
+  }, []);
+
   const [formData, setFormData] = useState({
     email: "",
     username: "",
@@ -46,12 +63,12 @@ export default function Login() {
     if (data.success) {
       localStorage.setItem("access_token", data.access_token);
 
-      setSuccess(data.message || "Account created successfully!");
+      showMessage(setSuccess, data.message || "Account created successfully!");
       setGeneral("");
       setTimeout(() => (window.location.href = "/home"), 1000);
     } else {
       console.error("Auth (Login) API error: ", data.message);
-      setGeneral(data.message || "Something went wrong.");
+      showMessage(setGeneral, data.message || "Something went wrong.");
       }
   };
 
@@ -60,19 +77,19 @@ export default function Login() {
       {/* Navbar */}
       <nav className="navbar bg-base-100 px-4 shadow">
         <div className="flex-1">
-          <a href="/home" className="btn btn-ghost normal-case text-xl">
+          <a href="/home" className="text-2xl font-bold text-primary">
             Home
           </a>
         </div>
-        <div className="flex-none">
-          <ul className="menu menu-horizontal p-0">
-            <li>
-              <a href="/profile">Profile</a>
-            </li>
-            <li>
-              <a href="/logout">Logout</a>
-            </li>
-          </ul>
+        <div className="flex-none space-x-4">
+          <a href="/profile" className="hover:text-primary font-medium">Profile</a>
+          <a href="/logout" className="hover:text-primary font-medium"
+          onClick={(e) => {
+          e.preventDefault(); // stop default navigation first
+          localStorage.removeItem("access_token"); // remove JWT
+          window.location.href = "/login"; // redirect manually
+          }}
+          >Logout</a>
         </div>
       </nav>
 

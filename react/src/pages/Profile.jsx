@@ -1,29 +1,20 @@
 import React, { useEffect, useState } from "react";
-import {fetchContent} from "../utils/fetchContent.jsx";
+import { fetchContent } from "../utils/fetchContent.jsx";
+import { showMessage } from "../utils/showMessage.jsx";
 
 export default function Profile() {
   const token = localStorage.getItem("access_token");
 
   if (!token) {
-    window.location.href = "/login";
-    return;
+    window.location.replace("/login");
+    return null;
   }
 
   const [general, setGeneral] = useState("");
   const [success, setSuccess] = useState("");
-  const [isVisible, setIsVisible] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [playlists, setPlaylists] = useState([]);
-
-  const showMessage = (setter, message, duration = 3000) => {
-    setter(message);
-    setIsVisible(true);
-
-    setTimeout(() => setIsVisible(false), duration);
-
-    setTimeout(() => setter(""), duration);
-  };
 
   useEffect(() => {
     const fetchData = async () => {

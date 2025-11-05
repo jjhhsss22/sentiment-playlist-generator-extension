@@ -11,6 +11,7 @@ import "./styles/index.css";
 
 
 const root = createRoot(document.getElementById("root"));
+
 root.render(
   <StrictMode>
     <Router>
@@ -26,8 +27,6 @@ root.render(
     </Router>
   </StrictMode>
 );
-
-export default App;
 
 
 
