@@ -1,7 +1,8 @@
+import os
 from flask import Flask, request, jsonify
 from tensorflow.errors import InvalidArgumentError
 
-from deployment.ai_module import run_prediction_pipeline
+from celery_worker import run_prediction_task
 
 app = Flask(__name__)
 
@@ -16,13 +17,34 @@ def return_prediction():
         return jsonify({"forbidden": True})
 
     try:
-        result = run_prediction_pipeline(input_text, desired_emotion)
-        return jsonify({"success": True, "result": result})
+        task = run_prediction_task.delay(input_text, desired_emotion)
+        return jsonify({"success": True, "task_id": task.id})
     except InvalidArgumentError:
         return jsonify({"success": False, "message": "Please submit text in full sentences"})
     except Exception:
         return jsonify({"success": False, "message": "ai server error. Please try again later"})
 
 
+# celery prediction task status
+@app.route("/task/<task_id>", methods=["GET"])
+def get_task_status(task_id):
+    task = run_prediction_task.AsyncResult(task_id)
+
+    if task.state == "PENDING":
+        return jsonify({"status": "pending"})
+    elif task.state == "SUCCESS":
+        return jsonify({"status": "done", "result": task.result})
+    elif task.state == "FAILURE":
+        return jsonify({"status": "error", "message": str(task.info)})
+    else:
+        return jsonify({"status": task.state})
+
+
+# AI api server health check
+@app.route("/health", methods=["GET"])
+def health_check():
+    return jsonify({"status": "ok"}), 200
+
 if __name__ == "__main__":
-    app.run(port=8001, debug=True)
+    port = int(os.environ.get("PORT", 8001))
+    app.run(host="0.0.0.0", port=port, debug=False)

@@ -1,0 +1,40 @@
+
+services:
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  ai_service:
+    build: ./ai_service
+    container_name: ai_service
+    ports:
+      - "8001:8001"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - FLASK_ENV=production
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  ai_worker:
+    build: ./ai_service
+    container_name: ai_worker
+    command: celery -A celery_worker.celery worker --loglevel=info --pool=solo
+             # pool=solo for Tensorflow model to handle one task at a time (prevent forking which breaks Tensorflow)
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy

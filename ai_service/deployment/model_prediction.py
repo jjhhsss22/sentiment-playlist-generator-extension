@@ -1,14 +1,18 @@
 import numpy as np
-from deployment.preprocessing import preprocess
+from .preprocessing import preprocess
 from tensorflow.errors import InvalidArgumentError
 import tensorflow as tf
 
-# Load model once at import time (relative to the CWD)
-sentiment_model = tf.keras.models.load_model("model/sentiment_model3.keras", compile=False)
 
-sentiment_model.compile(optimizer='adam',
-                        loss='categorical_crossentropy',
-                        metrics=['accuracy'])
+# def load():
+#     sentiment_model = tf.keras.models.load_model("model/sentiment_model3.keras", compile=False)
+#
+#     sentiment_model.compile(optimizer='adam',
+#                             loss='categorical_crossentropy',
+#                             metrics=['accuracy'])
+#
+#     return sentiment_model
+
 
 EMOTIONS = [
     'Anger', 'Boredom', 'Empty', 'Enthusiasm', 'Fun', 'Happiness',
@@ -22,10 +26,10 @@ EMOTION_COORDS = [
 
 
 # ml model sentiment prediction
-def predict(input_text: str):
-    final_text = preprocess(input_text)
+def predict(model, input_text: str):
+    final_token = preprocess(input_text)
     try:
-        predictions = sentiment_model.predict(final_text)
+        predictions = model.predict(final_token)
         return predictions
     except InvalidArgumentError:
         raise ValueError("Unable to predict sentiment")

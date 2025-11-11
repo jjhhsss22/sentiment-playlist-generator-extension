@@ -1,4 +1,5 @@
 import joblib
+import os
 from nltk.stem import PorterStemmer
 from nltk.tokenize import word_tokenize
 import neattext.functions as nt
@@ -15,9 +16,12 @@ def stem(text: str) -> str:
     stemmed = [ps.stem(word) for word in words]
     return ' '.join(stemmed)
 
-#  vectorisation
+#  vectorisation "cv/count_vectorizer3.joblib"
 def vectorise(stemmed_text: str):
-    cv = joblib.load("cv/count_vectorizer3.joblib")
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # path of current file
+    cv_path = os.path.join(BASE_DIR, "..", "cv", "count_vectorizer3.joblib")
+    cv_path = os.path.abspath(cv_path)
+    cv = joblib.load(cv_path)
     return cv.transform([stemmed_text])
 
 # combined preprocessing pipeline

@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 
-from deployment.model_prediction import predict, get_predicted_emotion, get_starting_coord, get_target_coord, EMOTIONS
-from deployment.utils import to_list, round_list
+from .model_prediction import predict, get_predicted_emotion, get_starting_coord, get_target_coord, EMOTIONS
+from .utils import to_list, round_list
 
 '''
 turned ai module "microservice-ready" in case I need to scale ml model and want to run development on a separate server
@@ -29,8 +29,9 @@ def calc_others_probability(array: list):
     return round(1 - total_prediction_sum, 1), valid_emotions, valid_predictions
 
 # main pipeline for Flask's /api/home route
-def run_prediction_pipeline(input_text: str, desired_emotion: str):
-    predictions = predict(input_text)
+def run_prediction_pipeline(model, input_text: str, desired_emotion: str):
+
+    predictions = predict(model, input_text)
     predictions = to_list(predictions[0])
     likely_emotion = get_predicted_emotion(predictions)
     starting_coord = get_starting_coord(predictions)

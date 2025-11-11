@@ -1,10 +1,11 @@
 from flask import request, jsonify, Blueprint, current_app, render_template
 import requests
+import time
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 api_home_bp = Blueprint('api_home', __name__)
 
-AI_SERVER_URL = "http://127.0.0.1:8001/predict"
+AI_SERVER_URL = "http://127.0.0.1:8001"
 MUSIC_SERER_URL = "http://127.0.0.1:8002/playlist"
 DB_API_URL = "http://127.0.0.1:8003/new-playlist"
 
@@ -24,7 +25,7 @@ def home():
     desired_emotion = data.get("emotion", None)
 
     try:
-        ai_response = requests.post(AI_SERVER_URL, json={
+        ai_response = requests.post(f"{AI_SERVER_URL}/predict", json={
             "API-Requested-With": "Home Gateway",
             # no need for IP whitelisting or internal secret key
             # because api servers only accessible from this gateway server
@@ -45,19 +46,45 @@ def home():
         if not ai_results.get("success"):
             return jsonify(ai_results)
 
-        ai_data = ai_results["result"]
-        predictions_list = ai_data["predictions_list"]
-        predicted_emotions = ai_data["predicted_emotions"]
-        likely_emotion = ai_data["likely_emotion"]
-        starting_coord = ai_data["starting_coord"]
-        target_coord = ai_data["target_coord"]
-        others_probability = ai_data["others_probability"]
+        task_id = ai_results.get("task_id")
+        print(task_id)
+
+        for _ in range(10):  # retry up to 10 times
+
+            '''
+            simple setup for now as AI most likely won't take more than 5 seconds
+            but should setup another celery task form this gateway server to constantly poll the AI task until it's done
+            '''
+
+            time.sleep(0.5)
+            status_resp = requests.get(f"{AI_SERVER_URL}/task/{task_id}")
+            status_data = status_resp.json()
+            print(status_data)
+
+            if status_data.get("status") == "done":
+                ai_data = status_data["result"]
+
+                print(ai_data)
+
+                predictions_list = ai_data["predictions_list"]
+                predicted_emotions = ai_data["predicted_emotions"]
+                likely_emotion = ai_data["likely_emotion"]
+                starting_coord = ai_data["starting_coord"]
+                target_coord = ai_data["target_coord"]
+                others_probability = ai_data["others_probability"]
+
+                break
+        else:
+            return jsonify({
+                "success": False,
+                "message": "Error when predicting emotion. Please try again later."
+            })
 
     except Exception as e:
         current_app.logger.error(f"Error: {e}")
         return jsonify({
             "success": False,
-            "message": "Error when predicting emotion. Please try again later."
+            "message": "AI server error. Please try again later."
         })
 
     try:

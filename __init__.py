@@ -7,6 +7,7 @@ def create_app():
 
     app.config["JWT_SECRET_KEY"] = "super-secret-key"  # secret JWT key for verification
     jwt = JWTManager(app)
+    jwt.init_app(app)
 
     from api.api_profile import api_profile_bp
     from api.auth.api_auth_routes import api_auth_bp
