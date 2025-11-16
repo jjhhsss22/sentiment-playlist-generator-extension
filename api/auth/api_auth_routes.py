@@ -1,5 +1,5 @@
 from flask import request, jsonify, Blueprint, current_app, render_template
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, set_access_cookies
 from datetime import timedelta
 import requests
 
@@ -70,9 +70,12 @@ def signup():
 
         access_token = create_access_token(identity=str(user_id), expires_delta=timedelta(hours=6))
 
-        return jsonify({"success": True,
-                        "message": f"Hello {username}, your account has been created!",
-                        "access_token": access_token}), 201
+        resp = jsonify({"success": True,
+                        "message": f"Hello {username}, your account has been created!"})
+
+        set_access_cookies(resp, access_token)
+
+        return resp, 201
 
     except Exception as e:
         current_app.logger.error(f"Error: {e}")
@@ -115,8 +118,11 @@ def login():
         user_id = login_result['id']
         access_token = create_access_token(identity=str(user_id), expires_delta=timedelta(hours=6))
 
-        return jsonify({"success": True, "message": f"Welcome {username}, you are logged in",
-                        "access_token": access_token}), 200
+        resp = jsonify({"success": True, "message": f"Welcome {username}, you are logged in"})
+
+        set_access_cookies(resp, access_token)
+
+        return resp, 200
 
     except Exception as e:
         current_app.logger.error(f"Error: {e}")

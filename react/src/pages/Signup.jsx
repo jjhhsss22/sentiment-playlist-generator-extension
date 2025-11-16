@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { fetchContent } from "../utils/fetchContent.jsx";
 import { showMessage } from "../utils/showMessage.jsx";
+import { handleLogout } from "../utils/auth";
+
 import "../styles/auth.css"
 
 
@@ -21,14 +23,27 @@ export default function Signup() {
     return () => window.removeEventListener("pageshow", handlePageShow);
   }, []);
 
+  useEffect(() => {  // show any messages that have been requested from the previous page
+    const flashMessage = sessionStorage.getItem("flashMessage");
+    const setter = sessionStorage.getItem("setter");
+    if (flashMessage) {
+      if (setter === "success") {
+        showMessage(setSuccess, flashMessage);
+      } else {
+        showMessage(setGeneral, flashMessage);
+      }
+
+      sessionStorage.removeItem("flashMessage");
+      sessionStorage.removeItem("setter")
+    }
+  }, []);
+
   const [formData, setFormData] = useState({
     email: "",
     username: "",
     password: "",
     confirmPassword: "",
   });
-
-
 
   const [errors, setErrors] = useState({});
   const [general, setGeneral] = useState("");
@@ -81,9 +96,9 @@ export default function Signup() {
       setGeneral(""); // clear general errors
       setTimeout(() => (window.location.href = "/home"), 1000);
     } else {
-      console.error("Auth (Signup) API error: ", data.message);
-      showMessage(setGeneral, data.message || "Something went wrong.");
-    }
+        console.error("Auth (Signup) API error: ", data.message);
+        showMessage(setGeneral, data.message || "Something went wrong.");
+      }
   };
 
 
@@ -97,12 +112,8 @@ export default function Signup() {
         </div>
         <div className="flex-none space-x-4">
           <a href="/profile" className="hover:text-primary font-medium">Profile</a>
-          <a href="/logout" className="hover:text-primary font-medium"
-          onClick={(e) => {
-          e.preventDefault(); // stop default navigation first
-          localStorage.removeItem("access_token"); // remove JWT
-          window.location.href = "/login"; // redirect manually
-          }}
+          <a href="#" className="hover:text-primary font-medium"
+          onClick={(e) => { e.preventDefault(); handleLogout(); }}
           >Logout</a>
         </div>
       </nav>

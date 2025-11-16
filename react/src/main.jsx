@@ -1,65 +1,39 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+
 import Signup from "./pages/Signup.jsx";
 import Login from "./pages/Login.jsx"
 import Home from "./pages/Home.jsx"
 import Profile from "./pages/Profile.jsx"
 import Unknown from "./pages/Unknown.jsx"
+import ProtectedRoute from "./components/ProtectedRoute.jsx"
 import "./styles/index.css";
 
-const signupRoot = document.getElementById("signup-root");
-const loginRoot = document.getElementById("login-root")
-const homeRoot = document.getElementById("home-root")
-const profileRoot = document.getElementById("profile-root")
-const unknownRoot = document.getElementById("unknown-root")
 
-if (signupRoot) {
-    createRoot(signupRoot).render(
-        <StrictMode>
-            <Signup />
-        </StrictMode>
-    );
-}
+const root = createRoot(document.getElementById("root"));
 
-if (loginRoot) {
-    createRoot(loginRoot).render(
-        <StrictMode>
-            <Login />
-        </StrictMode>
-    );
-}
-
-if (homeRoot) {
-    createRoot(homeRoot).render(
-        <StrictMode>
+root.render(
+  <StrictMode>
+    <Router>
+      <Routes>
+      <Route path="/" element={<Login />} />
+        <Route path="/home" element={
+          <ProtectedRoute>
             <Home />
-        </StrictMode>
-    );
-}
-
-if (profileRoot) {
-    createRoot(profileRoot).render(
-        <StrictMode>
+          </ProtectedRoute>
+        } />
+        <Route path="/profile" element={
+          <ProtectedRoute>
             <Profile />
-        </StrictMode>
-    );
-}
+          </ProtectedRoute>
+        } />
 
-if (unknownRoot) {
-    createRoot(unknownRoot).render(
-        <StrictMode>
-            <Unknown />
-        </StrictMode>
-    );
-}
+        <Route path="/login" element={<Login />} />
+        <Route path="/Signup" element={<Signup />} />
 
-//if (logoutRoot) {
-//    createRoot(loginRoot).render(
-//        <StrictMode>
-//            <Logout />
-//        </StrictMode>
-//    );
-//}
-
-
-
+        <Route path="*" element={<Unknown />} /> // catch-all route
+      </Routes>
+    </Router>
+  </StrictMode>
+);

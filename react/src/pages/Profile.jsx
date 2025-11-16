@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { fetchContent } from "../utils/fetchContent.jsx";
 import { showMessage } from "../utils/showMessage.jsx";
+import { handleLogout } from "../utils/auth";
 
 export default function Profile() {
   const token = localStorage.getItem("access_token");
@@ -9,6 +10,21 @@ export default function Profile() {
     window.location.replace("/login");
     return null;
   }
+
+  useEffect(() => {  // show any messages that have been requested from the previous page
+      const flashMessage = sessionStorage.getItem("flashMessage");
+      const setter = sessionStorage.getItem("setter");
+      if (flashMessage) {
+        if (setter === "success") {
+          showMessage(setSuccess, flashMessage);
+        } else {
+          showMessage(setGeneral, flashMessage);
+        }
+
+        sessionStorage.removeItem("flashMessage");
+        sessionStorage.removeItem("setter")
+      }
+    }, []);
 
   const [general, setGeneral] = useState("");
   const [success, setSuccess] = useState("");
@@ -30,9 +46,9 @@ export default function Profile() {
         setPlaylists(data.playlists);
         showMessage(setSuccess, "Playlists fetched successfully");
       } else {
-        console.error("Profile API error:", data.message);
-        showMessage(setGeneral, data.message || "Failed to fetch profile");
-      }
+          console.error("Profile API error:", data.message);
+          showMessage(setGeneral, data.message || "Failed to fetch profile");
+        }
     };
 
     fetchData();
@@ -48,12 +64,8 @@ export default function Profile() {
         </div>
         <div className="flex-none space-x-4">
           <a href="/profile" className="hover:text-primary font-medium">Profile</a>
-          <a href="/logout" className="hover:text-primary font-medium"
-          onClick={(e) => {
-          e.preventDefault();
-          localStorage.removeItem("access_token");
-          window.location.href = "/login";
-          }}
+          <a href="#" className="hover:text-primary font-medium"
+          onClick={(e) => { e.preventDefault(); handleLogout(); }}
           >Logout</a>
         </div>
       </nav>

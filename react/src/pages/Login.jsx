@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { fetchContent } from "../utils/fetchContent.jsx";
 import { showMessage } from "../utils/showMessage.jsx";
+import { handleLogout } from "../utils/auth";
+
 import "../styles/auth.css"
 
 
 export default function Login() {
-  useEffect(() => {
+  useEffect(() => {  // remove previously inserted information
     const handlePageShow = (event) => {
       if (event.persisted) {
         setFormData({
@@ -19,6 +21,21 @@ export default function Login() {
 
     window.addEventListener("pageshow", handlePageShow);
     return () => window.removeEventListener("pageshow", handlePageShow);
+  }, []);
+
+  useEffect(() => {  // show any messages that have been requested from the previous page
+    const flashMessage = sessionStorage.getItem("flashMessage");
+    const setter = sessionStorage.getItem("setter");
+    if (flashMessage) {
+      if (setter === "success") {
+        showMessage(setSuccess, flashMessage);
+      } else {
+        showMessage(setGeneral, flashMessage);
+      }
+
+      sessionStorage.removeItem("flashMessage");
+      sessionStorage.removeItem("setter")
+    }
   }, []);
 
   const [formData, setFormData] = useState({
@@ -67,8 +84,8 @@ export default function Login() {
       setGeneral("");
       setTimeout(() => (window.location.href = "/home"), 1000);
     } else {
-      console.error("Auth (Login) API error: ", data.message);
-      showMessage(setGeneral, data.message || "Something went wrong.");
+        console.error("Auth (Login) API error: ", data.message);
+        showMessage(setGeneral, data.message || "Something went wrong.");
       }
   };
 
@@ -83,12 +100,8 @@ export default function Login() {
         </div>
         <div className="flex-none space-x-4">
           <a href="/profile" className="hover:text-primary font-medium">Profile</a>
-          <a href="/logout" className="hover:text-primary font-medium"
-          onClick={(e) => {
-          e.preventDefault(); // stop default navigation first
-          localStorage.removeItem("access_token"); // remove JWT
-          window.location.href = "/login"; // redirect manually
-          }}
+          <a href="#" className="hover:text-primary font-medium"
+          onClick={(e) => { e.preventDefault(); handleLogout(); }}
           >Logout</a>
         </div>
       </nav>
