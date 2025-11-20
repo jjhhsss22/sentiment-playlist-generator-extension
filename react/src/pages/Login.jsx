@@ -45,7 +45,7 @@ export default function Login() {
     password: "",
   });
 
-  const newErrors = {};
+
 
   const [errors, setErrors] = useState({});
   const [general, setGeneral] = useState("");
@@ -60,6 +60,8 @@ export default function Login() {
     setErrors({});
     setGeneral("");
     setSuccess("");
+
+    const newErrors = {};
 
     if (!formData.email) newErrors.email = "Email is required";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
