@@ -7,7 +7,10 @@ import Login from "./pages/Login.jsx"
 import Home from "./pages/Home.jsx"
 import Profile from "./pages/Profile.jsx"
 import Unknown from "./pages/Unknown.jsx"
+
 import ProtectedRoute from "./components/ProtectedRoute.jsx"
+import NavigateWrapper from "./components/NavigateWrapper.jsx"
+
 import "./styles/index.css";
 
 
@@ -16,24 +19,30 @@ const root = createRoot(document.getElementById("root"));
 root.render(
   <StrictMode>
     <Router>
-      <Routes>
-      <Route path="/" element={<Login />} />
-        <Route path="/home" element={
-          <ProtectedRoute>
-            <Home />
-          </ProtectedRoute>
-        } />
-        <Route path="/profile" element={
-          <ProtectedRoute>
-            <Profile />
-          </ProtectedRoute>
-        } />
+      <NavigateWrapper>
+        <Routes>
+          <Route path="/" element={<Login />} />
 
-        <Route path="/login" element={<Login />} />
-        <Route path="/Signup" element={<Signup />} />
+          <Route path="/home" element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          } />
 
-        <Route path="*" element={<Unknown />} /> // catch-all route
-      </Routes>
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/unknown" element={<Unknown />} />
+
+          {/* catch-all */}
+          <Route path="*" element={<Unknown />} />
+        </Routes>
+      </NavigateWrapper>
     </Router>
   </StrictMode>
 );

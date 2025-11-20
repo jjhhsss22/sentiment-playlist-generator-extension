@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { fetchContent } from "../utils/fetchContent.jsx";
+import api from "../utils/axios.jsx";
 import { showMessage } from "../utils/showMessage.jsx";
 import { handleLogout } from "../utils/auth";
+import { navTo } from "../utils/navigate";
 
 import "../styles/auth.css"
 
@@ -23,18 +24,18 @@ export default function Signup() {
     return () => window.removeEventListener("pageshow", handlePageShow);
   }, []);
 
-  useEffect(() => {  // show any messages that have been requested from the previous page
+  useEffect(() => {
     const flashMessage = sessionStorage.getItem("flashMessage");
-    const setter = sessionStorage.getItem("setter");
+    const flashType = sessionStorage.getItem("flashType");
     if (flashMessage) {
-      if (setter === "success") {
+      if (flashType === "success") {
         showMessage(setSuccess, flashMessage);
       } else {
         showMessage(setGeneral, flashMessage);
       }
 
       sessionStorage.removeItem("flashMessage");
-      sessionStorage.removeItem("setter")
+      sessionStorage.removeItem("flashType")
     }
   }, []);
 
@@ -83,22 +84,16 @@ export default function Signup() {
       return;  // stop if frontend validation failed
     }
 
-    const data = await fetchContent("/api/signup", {
-      method: "POST",
-      headers: { "X-Requested-With": "ReactApp" },
-      body: JSON.stringify(formData),
-    });
-
-    if (data.success) {
-      localStorage.setItem("access_token", data.access_token);
+    try {
+      const { data } = await api.post("/signup", formData);
 
       showMessage(setSuccess, data.message || "Logged in successfully!");
-      setGeneral(""); // clear general errors
-      setTimeout(() => (window.location.href = "/home"), 1000);
-    } else {
-        console.error("Auth (Signup) API error: ", data.message);
-        showMessage(setGeneral, data.message || "Something went wrong.");
-      }
+      setTimeout(() => navTo("/home"), 1000);
+
+    } catch (err) {
+      console.error("Signup request error:", err);
+      showMessage(setGeneral, err?.response?.data?.message || "Something went wrong.");
+    }
   };
 
 

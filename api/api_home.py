@@ -1,4 +1,4 @@
-from flask import request, jsonify, Blueprint, current_app, render_template
+from flask import request, jsonify, Blueprint, current_app
 import requests
 import time
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -15,7 +15,9 @@ def home():
     if request.headers.get("X-Requested-With") != "ReactApp":
         current_app.logger.warning(f"Forbidden access: 403")
 
-        return render_template("unknown.html")
+        return jsonify({"success": False,
+                        "location": "/unknown",
+                        "message": "Forbidden access"}), 403
 
     user_id = int(get_jwt_identity())
 
@@ -41,7 +43,9 @@ def home():
 
         if ai_results.get("forbidden", False):
             current_app.logger.warning(f"Forbidden access to ai server: 403")
-            return render_template('unknown.html')
+            return jsonify({"success": False,
+                            "location": "/unknown",
+                            "message": "Forbidden access"}), 403
 
         if not ai_results.get("success"):
             return jsonify(ai_results)
@@ -101,8 +105,10 @@ def home():
         music_results = music_response.json()
 
         if music_results.get("forbidden", False):
-            current_app.logger.warning(f"Forbidden access to ai server: 403")
-            return render_template('unknown.html')
+            current_app.logger.warning(f"Forbidden access to music server: 403")
+            return jsonify({"success": False,
+                            "location": "/unknown",
+                            "message": "Forbidden access"}), 403
 
         music_data = music_results["result"]
         playlist_list = music_data["list"]

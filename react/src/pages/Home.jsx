@@ -1,30 +1,24 @@
 import React, { useState, useEffect } from "react";
-import { fetchContent } from "../utils/fetchContent.jsx";
+import api from "../utils/axios.jsx";
 import { showMessage } from "../utils/showMessage.jsx";
 import { handleLogout } from "../utils/auth";
 
 export default function Home() {
-  const token = localStorage.getItem("access_token");
-
-  if (!token) {
-    window.location.replace("/login");
-    return null;
-  }
 
   useEffect(() => {  // show any messages that have been requested from the previous page
-      const flashMessage = sessionStorage.getItem("flashMessage");
-      const setter = sessionStorage.getItem("setter");
-      if (flashMessage) {
-        if (setter === "success") {
-          showMessage(setSuccess, flashMessage);
-        } else {
-          showMessage(setGeneral, flashMessage);
-        }
-
-        sessionStorage.removeItem("flashMessage");
-        sessionStorage.removeItem("setter")
+    const flashMessage = sessionStorage.getItem("flashMessage");
+    const flashType = sessionStorage.getItem("flashType");
+    if (flashMessage) {
+      if (flashType === "success") {
+        showMessage(setSuccess, flashMessage);
+      } else {
+        showMessage(setGeneral, flashMessage);
       }
-    }, []);
+
+      sessionStorage.removeItem("flashMessage");
+      sessionStorage.removeItem("flashType")
+    }
+  }, []);
 
   const [formData, setFormData] = useState({
     text: "",
@@ -64,27 +58,21 @@ export default function Home() {
       return;
     }
 
-    const token = localStorage.getItem("access_token");
+    try {
+      const { data } = await api.post("/home", formData);  // JSON automatically
 
-    const data = await fetchContent("/api/home", {
-      method: "POST",
-      headers: { "X-Requested-With": "ReactApp",
-                 "Authorization": `Bearer ${token}`},
-      body: JSON.stringify(formData),
-    });
+      console.log("Response data:", data);
 
-    console.log("Response data:", data);
-
-    if (data.success) {
       setPredictions(data.predictions_list || []);
       setPredictedEmotions(data.predicted_emotions || []);
-      setPredictedOthers(data.others_prediction || 0)
+      setPredictedOthers(data.others_prediction || 0);
       setDesiredEmotion(data.desired_emotion || "");
       setSongs(data.songs_playlist || []);
       showMessage(setSuccess, "Playlist generated successfully!");
-    } else {
-      console.error("Home API error:", data.message);
-      showMessage(setGeneral, data.message || "Something went wrong.");
+
+    } catch (err) {
+      console.error("Home request error:", err);
+      showMessage(setGeneral, err?.response?.data?.message || "Something went wrong.");
     }
   };
 

@@ -38,14 +38,11 @@ def signup():
                 "email": email
             })
 
-        if verification_response.status_code != 200:
-            current_app.logger.error(f"Error status code: {verification_response.status_code}")
-            return jsonify({"success": False, "message": "failed to connect to db server "}), 500
-
         verify_result = verification_response.json()
 
-        if not verify_result.get("success"):
-            return jsonify(verify_result), 409
+        if verification_response.status_code != 200:
+            current_app.logger.error(f"Error status code: {verification_response.status_code}")
+            return jsonify(verify_result), verification_response.status_code
 
     except Exception as e:
         current_app.logger.error(f"Error: {e}")
@@ -61,11 +58,14 @@ def signup():
                 "password": password
             })
 
+        create_result = create_response.json()
+
         if create_response.status_code != 201:
             current_app.logger.error(f"Error status code: {create_response.status_code}")
-            return jsonify({"success": False, "message": "User creation failed"}), 500
+            # return jsonify({"success": False, "message": "User creation failed"}), 500
 
-        create_result = create_response.json()
+            return jsonify(create_result), create_response.status_code
+
         user_id = create_result.get("id")
 
         access_token = create_access_token(identity=str(user_id), expires_delta=timedelta(hours=6))
@@ -106,14 +106,11 @@ def login():
                 "password": password
             })
 
-        if login_response.status_code != 200:
-            current_app.logger.error(f"Error status code: {login_response.status_code}")
-            return jsonify({"success": False, "message": "Verification failed"}), 500
-
         login_result = login_response.json()
 
-        if not login_result.get("success"):
-            return jsonify(login_result), 401
+        if login_response.status_code != 200:
+            current_app.logger.error(f"Error status code: {login_response.status_code}")
+            return jsonify(login_result), login_response.status_code
 
         user_id = login_result['id']
         access_token = create_access_token(identity=str(user_id), expires_delta=timedelta(hours=6))

@@ -33,7 +33,7 @@ def verify_user():
             user = get_user_info(email)
 
             if not user:  # verification
-                return jsonify({"success": False, "message": "Invalid email"}), 404
+                return jsonify({"success": False, "message": "Invalid email"}), 401
 
             if user.username != username:
                 return jsonify({"success": False, "message": "Invalid username"}), 401
@@ -47,7 +47,7 @@ def verify_user():
             return jsonify({"success": False, "message": "Invalid mode"}), 400
 
     except Exception:
-        return jsonify({"success": False, "message": "Internal server error"}), 500
+        return jsonify({"success": False, "message": "Internal db server error"}), 500
 
 
 

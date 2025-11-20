@@ -22,7 +22,7 @@ def create_app():
     app.register_blueprint(api_profile_bp, url_prefix='/api')
     app.register_blueprint(api_auth_bp, url_prefix='/api')
     app.register_blueprint(api_home_bp, url_prefix='/api')
-    app.register_blueprint(jwt_bp)
+    app.register_blueprint(jwt_bp, url_prefix='/api')
     app.register_blueprint(website_bp)  # register flask blueprints from api's and website
 
     @jwt.unauthorized_loader
@@ -56,7 +56,6 @@ def create_app():
 
     @app.before_request
     def catch_direct_api_hits():
-        # Serve index.html for any unmatched frontend route or direct API browser access
         if request.path.startswith("/api") and "text/html" in request.headers.get("Accept", ""):
             return app.send_static_file("index.html")
 

@@ -1,38 +1,22 @@
-import { useNavigate } from "react-router-dom";
-import { showMessage } from "./showMessage.jsx";
+import api from "./axios";
 
-export async function fetchContent(url, options = {}) {
+export async function fetchContent(endpoint, options = {}) {
   try {
-    const res = await fetch(url, {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...(options.headers || {}),          // merge any additional headers
-      },
-      credentials: "include", // always include cookies
-    });
+    const method = options.method || "get";
+    const body = options.body || null;
 
-    const data = await res.json().catch(() => null);  // Try parsing JSON, fallback to null if invalid
+    const config = { ...options };
 
-    if (res.status === 401) {
-      console.warn("JWT Error:", data);
-
-      showMessage("general", data?.message || "Failed to authenticate user. Please try again", true);
-
-      if (data.location) {
-        navigate(data.location);
-      } else {
-        navigate("/login");
-      }
-
-      return null;
+    let response;
+    if (method.toLowerCase() === "get") {
+      response = await api.get(endpoint, config);
+    } else {
+      response = await api[method](endpoint, body, config);  // For POST, PUT, PATCH → send JSON data
     }
 
-    if (!res.ok) throw new Error(data?.message || "server error");
+    return response.data;
 
-    return data
   } catch (err) {
-    console.error("Fetch error:", err);
-    return { success: false, message: err };
+    return null;
   }
 }

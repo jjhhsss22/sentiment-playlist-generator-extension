@@ -1,30 +1,24 @@
 import React, { useEffect, useState } from "react";
-import { fetchContent } from "../utils/fetchContent.jsx";
+import api from "../utils/axios.jsx";
 import { showMessage } from "../utils/showMessage.jsx";
 import { handleLogout } from "../utils/auth";
 
 export default function Profile() {
-  const token = localStorage.getItem("access_token");
 
-  if (!token) {
-    window.location.replace("/login");
-    return null;
-  }
-
-  useEffect(() => {  // show any messages that have been requested from the previous page
-      const flashMessage = sessionStorage.getItem("flashMessage");
-      const setter = sessionStorage.getItem("setter");
-      if (flashMessage) {
-        if (setter === "success") {
-          showMessage(setSuccess, flashMessage);
-        } else {
-          showMessage(setGeneral, flashMessage);
-        }
-
-        sessionStorage.removeItem("flashMessage");
-        sessionStorage.removeItem("setter")
+  useEffect(() => {
+    const flashMessage = sessionStorage.getItem("flashMessage");
+    const flashType = sessionStorage.getItem("flashType");
+    if (flashMessage) {
+      if (flashType === "success") {
+        showMessage(setSuccess, flashMessage);
+      } else {
+        showMessage(setGeneral, flashMessage);
       }
-    }, []);
+
+      sessionStorage.removeItem("flashMessage");
+      sessionStorage.removeItem("flashType")
+    }
+  }, []);
 
   const [general, setGeneral] = useState("");
   const [success, setSuccess] = useState("");
@@ -34,21 +28,20 @@ export default function Profile() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const data = await fetchContent("/api/profile", {
-        headers: { "X-Requested-With": "ReactApp",
-                 "Authorization": `Bearer ${token}`},
-      });
+      try {
+        const { data } = await api.get("/profile");
 
-      console.log("Fetched playlists:", data.playlists);
-      setLoading(false);
+        console.log("Fetched playlists:", data.playlists);
+        setLoading(false);
 
-      if (data.success) {
         setPlaylists(data.playlists);
         showMessage(setSuccess, "Playlists fetched successfully");
-      } else {
-          console.error("Profile API error:", data.message);
-          showMessage(setGeneral, data.message || "Failed to fetch profile");
-        }
+
+      } catch (err) {
+        console.error("Profile request error:", err);
+        showMessage(setGeneral, err?.response?.data?.message || "Failed to fetch profile");
+        setLoading(false);
+      }
     };
 
     fetchData();

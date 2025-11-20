@@ -1,4 +1,4 @@
-from flask import jsonify, request, Blueprint, current_app, render_template
+from flask import jsonify, request, Blueprint, current_app
 import requests
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
@@ -11,7 +11,9 @@ DB_API_URL = "http://127.0.0.1:8003/playlist"
 def api_profile():
     if request.headers.get("X-Requested-With") != "ReactApp":
         current_app.logger.warning(f"Forbidden access: 403")
-        return render_template("unknown.html"), 403
+        return jsonify({"success": False,
+                        "location": "/unknown",
+                        "message": "Forbidden access"}), 403
 
     user_id = int(get_jwt_identity())
 
