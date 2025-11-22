@@ -45,8 +45,6 @@ export default function Login() {
     password: "",
   });
 
-
-
   const [errors, setErrors] = useState({});
   const [general, setGeneral] = useState("");
   const [success, setSuccess] = useState("");

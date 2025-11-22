@@ -1,3 +1,5 @@
+let messageTimeout;
+
 export const showMessage = (setter, message, persist = false, duration = 3000) => {
   if (persist) {
     sessionStorage.setItem("flashType", setter);
@@ -5,6 +7,8 @@ export const showMessage = (setter, message, persist = false, duration = 3000) =
     return;
   }
 
+  if (messageTimeout) clearTimeout(messageTimeout);  // Clear any pending timeout before setting a new one
+
   setter(message);
-  setTimeout(() => setter(""), duration);
+  messageTimeout = setTimeout(() => setter(""), duration);
 };

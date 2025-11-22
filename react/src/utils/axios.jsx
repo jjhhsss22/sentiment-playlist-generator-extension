@@ -33,7 +33,7 @@ api.interceptors.response.use(
     const res = error.response;
 
     if (!res) {
-      showMessage("general", "Network error", false);
+      showMessage("general", "Network error", true);
       return Promise.reject(error);
     }
 
@@ -45,7 +45,6 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    showMessage("general", res.data?.message || "Server error", false);
     return Promise.reject(error);
   }
 );
