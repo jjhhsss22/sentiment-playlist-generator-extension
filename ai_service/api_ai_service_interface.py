@@ -16,13 +16,9 @@ def return_prediction():
     if origin != "Home Gateway":
         return jsonify({"forbidden": True})
 
-    try:
-        task = run_prediction_task.delay(input_text, desired_emotion)
-        return jsonify({"success": True, "task_id": task.id})
-    except InvalidArgumentError:
-        return jsonify({"success": False, "message": "Please submit text in full sentences"})
-    except Exception:
-        return jsonify({"success": False, "message": "ai server error. Please try again later"})
+    task = run_prediction_task.delay(input_text, desired_emotion)
+    return jsonify({"success": True, "task_id": task.id})
+
 
 
 # celery prediction task status
@@ -34,8 +30,8 @@ def get_task_status(task_id):
         return jsonify({"status": "pending"})
     elif task.state == "SUCCESS":
         return jsonify({"status": "done", "result": task.result})
-    elif task.state == "FAILURE":
-        return jsonify({"status": "error", "message": str(task.info)})
+    # elif task.state == "FAILURE":
+    #     return jsonify({"status": "error", "message": str(task.info)})
     else:
         return jsonify({"status": task.state})
 

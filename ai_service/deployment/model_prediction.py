@@ -1,7 +1,5 @@
 import numpy as np
 from .preprocessing import preprocess
-from tensorflow.errors import InvalidArgumentError
-import tensorflow as tf
 
 
 # def load():
@@ -28,11 +26,7 @@ EMOTION_COORDS = [
 # ml model sentiment prediction
 def predict(model, input_text: str):
     final_token = preprocess(input_text)
-    try:
-        predictions = model.predict(final_token)
-        return predictions
-    except InvalidArgumentError:
-        raise ValueError("Unable to predict sentiment")
+    return model.predict(final_token)
 
 # return the name of the most likely emotion
 def get_predicted_emotion(predictions) -> str:

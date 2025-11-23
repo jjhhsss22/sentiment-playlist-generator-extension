@@ -2,6 +2,7 @@ from celery import Celery
 import os
 import sys
 import tensorflow as tf
+from tensorflow.errors import InvalidArgumentError
 
 sys.path.append("/app")  # for docker
 
@@ -35,7 +36,7 @@ def run_prediction_task(input_text, desired_emotion):
     try:
         from deployment.ai_module import run_prediction_pipeline
         return run_prediction_pipeline(sentiment_model, input_text, desired_emotion)
-    except Exception as e:
-        return {"success": False, "message": str(e)}
+    except InvalidArgumentError:
+        return {"success": False, "message": "please type in full sentences"}
 
 # celery -A celery_worker:celery worker -l INFO -P solo

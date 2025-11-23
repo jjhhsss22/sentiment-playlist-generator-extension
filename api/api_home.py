@@ -37,7 +37,7 @@ def home():
 
         if ai_response.status_code != 200:
             current_app.logger.error(f"Error status code: {ai_response.status_code}")
-            return jsonify({"success": False, "message": "failed to connect to ai server "})
+            return jsonify({"success": False, "message": "failed to connect to ai server "}), 500
 
         ai_results = ai_response.json()
 
@@ -47,11 +47,7 @@ def home():
                             "location": "/unknown",
                             "message": "Forbidden access"}), 403
 
-        if not ai_results.get("success"):
-            return jsonify(ai_results)
-
         task_id = ai_results.get("task_id")
-        print(task_id)
 
         for _ in range(10):  # retry up to 10 times
 
@@ -63,12 +59,15 @@ def home():
             time.sleep(0.5)
             status_resp = requests.get(f"{AI_SERVER_URL}/task/{task_id}")
             status_data = status_resp.json()
-            print(status_data)
 
             if status_data.get("status") == "done":
                 ai_data = status_data["result"]
 
-                print(ai_data)
+                if ai_data.get("success") is False:
+                    return jsonify({
+                        "success": False,
+                        "message": ai_data.get("message", "Prediction error")
+                    }), 400
 
                 predictions_list = ai_data["predictions_list"]
                 predicted_emotions = ai_data["predicted_emotions"]
@@ -81,15 +80,15 @@ def home():
         else:
             return jsonify({
                 "success": False,
-                "message": "Error when predicting emotion. Please try again later."
-            })
+                "message": "Prediction timed out. Please try again later."
+            }), 408
 
     except Exception as e:
         current_app.logger.error(f"Error: {e}")
         return jsonify({
             "success": False,
             "message": "AI server error. Please try again later."
-        })
+        }), 408
 
     try:
         music_response = requests.post(MUSIC_SERER_URL, json={
