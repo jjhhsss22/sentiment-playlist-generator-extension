@@ -12,13 +12,13 @@ def return_playlist():
     target_coord = data.get("target_coord")
 
     if origin != "Home Gateway":
-        return jsonify({"forbidden": True})
+        return jsonify({"forbidden": True}), 403
 
     try:
         result = generate_playlist_pipeline(starting_coord, target_coord)
-        return jsonify({"success": True, "result": result})
-    except Exception:
-        return jsonify({"success": False, "message": "music_service server error. Please try again later"})
+        return jsonify({"success": True, "result": result}), 200
+    except Exception:  # no need for detailed error messaging for the music service
+        return jsonify({"success": False, "message": "music server error. Please try again later"}), 500
 
 
 if __name__ == "__main__":

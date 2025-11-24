@@ -77,6 +77,11 @@ def new_user():
 def new_playlist():
     data = request.get_json()
 
+    origin = data.get("API-Requested-With", "")
+
+    if origin != "Home Gateway":
+        return jsonify({"forbidden": True}), 403
+
     try:
         input_text = data.get("text")
         likely_emotion = data.get("likely_emotion")
@@ -89,7 +94,7 @@ def new_playlist():
 
         return jsonify({"success": True, "message": "Playlist created successfully"}), 201
     except Exception:
-        return jsonify({"success": "false", "message": "Failed to create playlist"}), 500
+        return jsonify({"success": False, "message": "Failed to create playlist"}), 500
 
 
 @app.route('/playlist', methods=['POST'])
@@ -104,10 +109,11 @@ def return_playlists():
 
     try:
         playlists_data = get_playlists(user_id)
+        return jsonify({"success": True, "playlists": playlists_data}), 200
     except Exception:
         return jsonify({"success": False, "message": "Playlist database error" }), 500
 
-    return jsonify({"success": True, "playlists": playlists_data}), 200
+
 
 
 if __name__ == "__main__":

@@ -26,6 +26,8 @@ def home():
     input_text = data.get("text", "").strip()
     desired_emotion = data.get("emotion", None)
 
+# AI ------------------------------------------------------------------------
+
     try:
         ai_response = requests.post(f"{AI_SERVER_URL}/predict", json={
             "API-Requested-With": "Home Gateway",
@@ -35,21 +37,29 @@ def home():
             "emotion": desired_emotion
         })
 
-        if ai_response.status_code != 200:
+        try:
+            ai_results = ai_response.json()
+        except Exception:
+            current_app.logger.error("bad response from AI server")
+            return jsonify({
+                "success": False,
+                "message": "Bad response from AI server. Please try again later."
+            }), 502
+
+        if not ai_response.ok:
+            if ai_results.get("forbidden", False):
+                current_app.logger.warning(f"Forbidden access to ai server: 403")
+                return jsonify({"success": False,
+                                "location": "/unknown",
+                                "message": "Forbidden access"}), 403
+
             current_app.logger.error(f"Error status code: {ai_response.status_code}")
-            return jsonify({"success": False, "message": "failed to connect to ai server "}), 500
-
-        ai_results = ai_response.json()
-
-        if ai_results.get("forbidden", False):
-            current_app.logger.warning(f"Forbidden access to ai server: 403")
-            return jsonify({"success": False,
-                            "location": "/unknown",
-                            "message": "Forbidden access"}), 403
+            ai_message = ai_results.get("message", "Error when retrieving prediction. Please try again later.")
+            return jsonify({"success": False, "message": ai_message}), ai_response.status_code
 
         task_id = ai_results.get("task_id")
 
-        for _ in range(10):  # retry up to 10 times
+        for _ in range(16):  # retry for 8 seconds
 
             '''
             simple setup for now as AI most likely won't take more than 5 seconds
@@ -58,16 +68,22 @@ def home():
 
             time.sleep(0.5)
             status_resp = requests.get(f"{AI_SERVER_URL}/task/{task_id}")
-            status_data = status_resp.json()
+
+            try:
+                status_data = status_resp.json()
+            except Exception:
+                current_app.logger.error("bad response from AI celery task")
+                continue
 
             if status_data.get("status") == "done":
                 ai_data = status_data["result"]
 
                 if ai_data.get("success") is False:
+                    current_app.logger.error(f"Error status code: {ai_data.status_code}")
                     return jsonify({
                         "success": False,
-                        "message": ai_data.get("message", "Prediction error")
-                    }), 400
+                        "message": ai_data.get("message", "Error when predicting emotion. Please try again later.")
+                    }), ai_data.status_code
 
                 predictions_list = ai_data["predictions_list"]
                 predicted_emotions = ai_data["predicted_emotions"]
@@ -77,18 +93,24 @@ def home():
                 others_probability = ai_data["others_probability"]
 
                 break
+
+            # if status_data.get("status") == "error":
+            #     current_app.logger.error(f"AI Celery task error: {status_data["result"].get("message", "")}")
+
         else:
             return jsonify({
                 "success": False,
                 "message": "Prediction timed out. Please try again later."
             }), 408
 
-    except Exception as e:
+    except Exception as e:  # handle network errors
         current_app.logger.error(f"Error: {e}")
         return jsonify({
             "success": False,
             "message": "AI server error. Please try again later."
-        }), 408
+        }), 500
+
+# MUSIC ------------------------------------------------------------------------
 
     try:
         music_response = requests.post(MUSIC_SERER_URL, json={
@@ -97,17 +119,25 @@ def home():
             "target_coord": target_coord,
         })
 
-        if music_response.status_code != 200:
+        try:
+            music_results = music_response.json()
+        except Exception:
+            current_app.logger.error("bad response from music server")
+            return jsonify({
+                "success": False,
+                "message": "Bad response from music server. Please try again later."
+            }), 502
+
+        if not music_response.ok:
+            if music_results.get("forbidden", False):
+                current_app.logger.warning(f"Forbidden access to music server: 403")
+                return jsonify({"success": False,
+                                "location": "/unknown",
+                                "message": "Forbidden access"}), 403
+
             current_app.logger.error(f"Error status code: {music_response.status_code}")
-            return jsonify({"success": False, "message": "failed to connect to music server "})
-
-        music_results = music_response.json()
-
-        if music_results.get("forbidden", False):
-            current_app.logger.warning(f"Forbidden access to music server: 403")
-            return jsonify({"success": False,
-                            "location": "/unknown",
-                            "message": "Forbidden access"}), 403
+            music_message = music_results.get("message", "Error when generating playlist. Please try again later.")
+            return jsonify({"success": False, "message": music_message}), music_response.status_code
 
         music_data = music_results["result"]
         playlist_list = music_data["list"]
@@ -117,14 +147,16 @@ def home():
             return jsonify({
                 "success": False,
                 "message": "No available songs with the provided emotions. You are already near your desired emotion!"
-            })
+            }), 200
 
-    except Exception as e:
+    except Exception as e:  # handle network errors
         current_app.logger.error(f"Error: {e}")
         return jsonify({
             "success": False,
-            "message": "Error when generating playlist. Please try again later."
-            })
+            "message": "Music server error. Please try again later."
+            }), 500
+
+# DB ------------------------------------------------------------------------
 
     try:
         db_response = requests.post(
@@ -138,15 +170,25 @@ def home():
                 "user_id": user_id
             })
 
-        if db_response.status_code != 201:
+        try:
+            db_results = db_response.json()
+        except Exception:
+            current_app.logger.error("bad response from db server")
+            return jsonify({
+                "success": False,
+                "message": "Bad response from database server. Please try again later."
+            }), 502
+
+        if not db_response.ok:
+            if db_results.get("forbidden", False):
+                current_app.logger.warning(f"Forbidden access to db server: 403")
+                return jsonify({"success": False,
+                                "location": "/unknown",
+                                "message": "Forbidden access"}), 403
+
             current_app.logger.error(f"Error status code: {db_response.status_code}")
-            return jsonify({"success": False, "message": "failed to connect to db server "}), 500
-
-        db_results = db_response.json()
-
-        if not db_results.get("success"):
-            current_app.logger.error("Playlist creation failed in db server")
-            return jsonify(db_results), 400
+            db_message = db_results.get("message", "Error when saving playlist. Please try again later.")
+            return jsonify({"success": False, "message": db_message}), db_response.status_code
 
         return jsonify({
             "success": True,
@@ -156,11 +198,11 @@ def home():
             "predicted_emotions": predicted_emotions,
             "predictions_list": predictions_list,
             "others_prediction": others_probability
-        })
+        }), 200
 
-    except Exception as e:
+    except Exception as e:  # handle network errors
         current_app.logger.error(f"Error: {e}")
         return jsonify({
             "success": False,
-            "message": "Error when saving playlist. Please try again later."
-        })
+            "message": "Database server error. Please try again later."
+        }), 500

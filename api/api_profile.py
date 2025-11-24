@@ -25,19 +25,29 @@ def api_profile():
                 "user_id": user_id
             })
 
-        if response.status_code != 200:
+        try:
+            results = response.json()
+        except Exception:
+            current_app.logger.error("bad response from db server")
+            return jsonify({
+                "success": False,
+                "message": "Bad response from database server. Please try again later."
+            }), 502
+
+        if not response.ok:
+            if results.get("forbidden", False):
+                current_app.logger.warning(f"Forbidden access to db server: 403")
+                return jsonify({"success": False,
+                                "location": "/unknown",
+                                "message": "Forbidden access"}), 403
+
+            db_message = results.get("message", "Error when retrieving playlists")
             current_app.logger.error(f"Error status code: {response.status_code}")
-            return jsonify({"success": False, "message": "failed to connect to db server "}), 500
-
-        results = response.json()
-
-        if not results.get("success"):
-            return jsonify(results), 400
+            return jsonify({"success": False, "message": db_message}), response.status_code
 
         playlists_data = results.get("playlists", [])
-
         return jsonify({"success": True, "playlists": playlists_data}), 200
 
     except Exception as e:
         current_app.logger.error(f"Error: {e}")
-        return jsonify({"success": False, "message": "Error when retrieving playlists" }), 500
+        return jsonify({"success": False, "message": "Database server error. Please try again later."}), 500

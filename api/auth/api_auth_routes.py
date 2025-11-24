@@ -38,15 +38,26 @@ def signup():
                 "email": email
             })
 
-        verify_result = verification_response.json()
+        try:
+            verify_result = verification_response.json()
+        except Exception:
+            current_app.logger.error(f"bad response from db server during verification: {verification_response.status_code}")
+            return jsonify({"success": False, "message": "Database server error"}), 502
 
-        if verification_response.status_code != 200:
+        if not verification_response.ok:
+            if verify_result.get("forbidden", False):
+                current_app.logger.warning(f"Forbidden access to db server: 403")
+                return jsonify({"success": False,
+                                "location": "/unknown",
+                                "message": "Forbidden access"}), 403
+
+            verify_message = verify_result.get("message", "Failed to authenticate")
             current_app.logger.error(f"Error status code: {verification_response.status_code}")
-            return jsonify(verify_result), verification_response.status_code
+            return jsonify({"success": False, "message": verify_message}), verification_response.status_code
 
     except Exception as e:
-        current_app.logger.error(f"Error: {e}")
-        return jsonify({"success": False, "message": "Could not connect to user database"}), 500
+        current_app.logger.error(f"Verification error: {e}")
+        return jsonify({"success": False, "message": "Database server error. Please try again later."}), 500
 
     try:
         create_response = requests.post(
@@ -58,28 +69,35 @@ def signup():
                 "password": password
             })
 
-        create_result = create_response.json()
+        try:
+            create_result = create_response.json()
+        except Exception:
+            current_app.logger.error(f"bad response from db server during user creation: {create_response.status_code}")
+            return jsonify({"success": False, "message": "Database server error"}), 502
 
-        if create_response.status_code != 201:
+        if not create_response.ok:
+            if create_result.get("forbidden", False):
+                current_app.logger.warning(f"Forbidden access to db server: 403")
+                return jsonify({"success": False,
+                                "location": "/unknown",
+                                "message": "Forbidden access"}), 403
+
+            create_message = create_result.get("message", "Failed to create new user")
             current_app.logger.error(f"Error status code: {create_response.status_code}")
-            # return jsonify({"success": False, "message": "User creation failed"}), 500
-
-            return jsonify(create_result), create_response.status_code
+            return jsonify({"success": False, "message": create_message}), create_response.status_code
 
         user_id = create_result.get("id")
-
         access_token = create_access_token(identity=str(user_id), expires_delta=timedelta(hours=6))
 
         resp = jsonify({"success": True,
                         "message": f"Hello {username}, your account has been created!"})
-
         set_access_cookies(resp, access_token)
 
         return resp, 201
 
     except Exception as e:
-        current_app.logger.error(f"Error: {e}")
-        return jsonify({"success": False, "message": "Failed to create user"}), 500
+        current_app.logger.error(f"User creation error: {e}")
+        return jsonify({"success": False, "message": "Database server error. Please try again later."}), 500
 
 
 @api_auth_bp.route('/login', methods=['POST'])
@@ -106,24 +124,34 @@ def login():
                 "password": password
             })
 
-        login_result = login_response.json()
+        try:
+            login_result = login_response.json()
+        except Exception:
+            current_app.logger.error(f"bad response from db server during user creation: {login_response.status_code}")
+            return jsonify({"success": False, "message": "Database server error"}), 502
 
-        if login_response.status_code != 200:
+        if not login_response.ok:
+            if login_result.get("forbidden", False):
+                current_app.logger.warning(f"Forbidden access to db server: 403")
+                return jsonify({"success": False,
+                                "location": "/unknown",
+                                "message": "Forbidden access"}), 403
+
+            login_message = login_result.get("message", "Failed to log user in")
             current_app.logger.error(f"Error status code: {login_response.status_code}")
-            return jsonify(login_result), login_response.status_code
+            return jsonify({"success": False, "message": login_message}), login_response.status_code
 
         user_id = login_result['id']
         access_token = create_access_token(identity=str(user_id), expires_delta=timedelta(hours=6))
 
         resp = jsonify({"success": True, "message": f"Welcome {username}, you are logged in"})
-
         set_access_cookies(resp, access_token)
 
         return resp, 200
 
     except Exception as e:
-        current_app.logger.error(f"Error: {e}")
-        return jsonify({"success": False, "message": "Failed to log user in"}), 500
+        current_app.logger.error(f"Login error: {e}")
+        return jsonify({"success": False, "message": "Database server error. Please try again later."}), 500
 
 
 # @api_auth_bp.route('/logout', methods=['POST'])
