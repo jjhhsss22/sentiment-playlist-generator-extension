@@ -3,7 +3,7 @@ from flask_jwt_extended import create_access_token, set_access_cookies
 from datetime import timedelta
 import requests
 
-from api.auth.auth_verification import is_valid_username, is_valid_password
+from gateway.api.auth.auth_verification import is_valid_username, is_valid_password
 
 api_auth_bp = Blueprint('api_auth', __name__)
 
