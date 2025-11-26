@@ -27,3 +27,5 @@ def configure_logging():
 
     logger.addHandler(stdout_handler)
     logger.addHandler(stderr_handler)
+
+    logger.propagate = False  # prevent duplicate logs

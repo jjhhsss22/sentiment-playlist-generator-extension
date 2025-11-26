@@ -6,49 +6,77 @@ from db_init import create_db
 
 app = create_db()
 
-@app.route('/verification', methods=['GET', 'POST'])
-def verify_user():
+@app.route('/api/v1/query', methods=['GET'])
+def get_user():
     data = request.get_json()
     origin = data.get("API-Requested-With", "")
 
     if origin != "Home Gateway":
         return jsonify({"forbidden": True}), 403
 
-    mode = data.get("mode")
     email = data.get("email")
 
     try:
-        if mode == "signup":
-            existing_user = get_user_info(email)
+        user = get_user_info(email)
 
-            if existing_user:
-                return jsonify({"success": False, "message": "Email already registered"}), 409
+        if not user:
+            return jsonify({"success": True, "user": None}), 200
 
-            return jsonify({"success": True, "message": "Email not registered"}), 200
-
-        if mode == "login":
-            username = data.get("username")
-            password = data.get("password")
-
-            user = get_user_info(email)
-
-            if not user:  # verification
-                return jsonify({"success": False, "message": "Invalid email"}), 401
-
-            if user.username != username:
-                return jsonify({"success": False, "message": "Invalid username"}), 401
-
-            if not check_password_hash(user.password, password):
-                return jsonify({"success": False, "message": "Invalid password"}), 401
-
-            return jsonify({"success": True, "message": "Login successful", "id": user.id}), 200
-
-        else:
-            return jsonify({"success": False, "message": "Invalid mode"}), 400
+        return jsonify({
+            "success": True,
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "username": user.username,
+                "password_hash": user.password  # hashed password
+            }
+        }), 200
 
     except Exception:
         return jsonify({"success": False, "message": "Internal db server error"}), 500
 
+# @app.route('/verification', methods=['GET', 'POST'])
+# def verify_user():
+#     data = request.get_json()
+#     origin = data.get("API-Requested-With", "")
+#
+#     if origin != "Home Gateway":
+#         return jsonify({"forbidden": True}), 403
+#
+#     mode = data.get("mode")
+#     email = data.get("email")
+#
+#     try:
+#         if mode == "signup":
+#             existing_user = get_user_info(email)
+#
+#             if existing_user:
+#                 return jsonify({"success": False, "message": "Email already registered"}), 409
+#
+#             return jsonify({"success": True, "message": "Email not registered"}), 200
+#
+#         if mode == "login":
+#             username = data.get("username")
+#             password = data.get("password")
+#
+#             user = get_user_info(email)
+#
+#             if not user:  # verification
+#                 return jsonify({"success": False, "message": "Invalid email"}), 401
+#
+#             if user.username != username:
+#                 return jsonify({"success": False, "message": "Invalid username"}), 401
+#
+#             if not check_password_hash(user.password, password):
+#                 return jsonify({"success": False, "message": "Invalid password"}), 401
+#
+#             return jsonify({"success": True, "message": "Login successful", "id": user.id}), 200
+#
+#         else:
+#             return jsonify({"success": False, "message": "Invalid mode"}), 400
+#
+#     except Exception:
+#         return jsonify({"success": False, "message": "Internal db server error"}), 500
 
 
 @app.route('/new-user', methods=['POST'])
@@ -63,14 +91,31 @@ def new_user():
     try:
         email = data.get("email")
         username = data.get("username")
-        password = data.get("password")
+        hashed_password = data.get("hashed_password")
 
-        new_user = create_user(email, username, password)
+        new_user = create_user(email, username, hashed_password)
         save(new_user)
 
         return jsonify({"success": True, "message": "User created successfully", "id": new_user.id}), 201
     except Exception:
         return jsonify({"success": False, "message": "Failed to create user"}), 500
+
+
+@app.route('/playlist', methods=['POST'])
+def get_playlists():
+    data = request.get_json()
+    origin = data.get("API-Requested-With", "")
+
+    if origin != "Home Gateway":
+        return jsonify({"forbidden": True}), 403
+
+    user_id = data.get("user_id")
+
+    try:
+        playlists_data = get_playlists(user_id)
+        return jsonify({"success": True, "playlists": playlists_data}), 200
+    except Exception:
+        return jsonify({"success": False, "message": "Playlist database error" }), 500
 
 
 @app.route('/new-playlist', methods=['POST'])
@@ -95,23 +140,6 @@ def new_playlist():
         return jsonify({"success": True, "message": "Playlist created successfully"}), 201
     except Exception:
         return jsonify({"success": False, "message": "Failed to create playlist"}), 500
-
-
-@app.route('/playlist', methods=['POST'])
-def return_playlists():
-    data = request.get_json()
-    origin = data.get("API-Requested-With", "")
-
-    if origin != "Home Gateway":
-        return jsonify({"forbidden": True}), 403
-
-    user_id = data.get("user_id")
-
-    try:
-        playlists_data = get_playlists(user_id)
-        return jsonify({"success": True, "playlists": playlists_data}), 200
-    except Exception:
-        return jsonify({"success": False, "message": "Playlist database error" }), 500
 
 
 

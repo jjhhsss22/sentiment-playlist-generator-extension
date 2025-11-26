@@ -1,13 +1,13 @@
 from flask import Flask, current_app, request, jsonify
 from flask_jwt_extended import JWTManager
-from gw_logging_config import configure_logging
+from gateway.log_logic.gw_logging_config import configure_logging
 import logging
 
 def create_app():
     configure_logging() # logging setup
 
-    # log = logging.getLogger('werkzeug')  # to suppress HTTP logs from werkzeug
-    # log.setLevel(logging.WARNING)
+    log = logging.getLogger('werkzeug')  # to suppress HTTP logs from werkzeug
+    log.setLevel(logging.WARNING)
 
     app = Flask(__name__)  # set up flask environment
 
