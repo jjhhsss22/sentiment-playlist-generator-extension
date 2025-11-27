@@ -1,6 +1,6 @@
 from flask import Flask, current_app, request, jsonify
 from flask_jwt_extended import JWTManager
-from gateway.log_logic.gw_logging_config import configure_logging
+from log_logic.gw_logging_config import configure_logging
 import logging
 
 def create_app():

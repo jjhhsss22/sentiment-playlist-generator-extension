@@ -7,7 +7,7 @@ from gateway.log_logic.log_util import log
 api_home_bp = Blueprint('api_home', __name__)
 
 AI_SERVER_URL = "http://127.0.0.1:8001"
-MUSIC_SERER_URL = "http://127.0.0.1:8002/playlist"
+MUSIC_SERER_URL = "http://127.0.0.1:8002/create-playlist"
 DB_API_URL = "http://127.0.0.1:8003/new-playlist"
 
 

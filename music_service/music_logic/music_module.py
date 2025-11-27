@@ -1,4 +1,4 @@
-from music_logic.music_class import Songs, get_quadrant_object
+from music_service.music_logic.music_class import Songs, get_quadrant_object
 
 def generate_playlist_pipeline(start_coord, target_coord):
     start_object = get_quadrant_object("start", start_coord)

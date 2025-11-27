@@ -1,13 +1,13 @@
-from werkzeug.security import check_password_hash
 from flask import request, jsonify
 
 from db_service.db_structure.db_module import get_user_info, get_playlists, create_user, create_playlist, save
+from log_logic.log_util import log
 from db_init import create_db
 
 app = create_db()
 
-@app.route('/api/v1/query', methods=['GET'])
-def get_user():
+@app.route('/v1/query', methods=['POST'])
+def return_user():
     data = request.get_json()
     origin = data.get("API-Requested-With", "")
 
@@ -102,7 +102,7 @@ def new_user():
 
 
 @app.route('/playlist', methods=['POST'])
-def get_playlists():
+def return_playlists():
     data = request.get_json()
     origin = data.get("API-Requested-With", "")
 

@@ -1,10 +1,11 @@
 import os
 from flask import Flask, request, jsonify
-from tensorflow.errors import InvalidArgumentError
 
 from celery_worker import run_prediction_task
+from log_logic.log_util import log
+from ai_init import create_ais
 
-app = Flask(__name__)
+app = create_ais()
 
 @app.route("/predict", methods=["POST"])
 def return_prediction():

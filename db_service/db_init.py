@@ -1,10 +1,18 @@
 from flask import Flask
-from db_service.db_structure.dbmodels import db
 import pymysql
+import logging
+
+from db_service.db_structure.dbmodels import db
+from log_logic.db_logging_config import configure_logging
 
 pymysql.install_as_MySQLdb()
 
 def create_db():
+    configure_logging()
+
+    logger = logging.getLogger('werkzeug')
+    logger.setLevel(logging.WARNING)
+
     app = Flask(__name__)
 
     app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:sqlsecretkey123@localhost/spge'

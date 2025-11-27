@@ -18,7 +18,7 @@ class JsonFormatter(logging.Formatter):
         }
         return json.dumps(log)
 
-def configure_logging(service_name: str = "gateway"):
+def configure_logging(service_name: str = "music"):
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 

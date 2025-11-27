@@ -2,11 +2,8 @@ from flask import request, current_app
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 
 def log(level, event, **extra_kwargs):
-    """
-    Standardised JSON production logs.
-    """
 
-    user_id = None  # for endpoints where jwt does not exist (e.g. auth routes)
+    user_id = None
     try:
         verify_jwt_in_request(optional=True)
         user_id = get_jwt_identity()
