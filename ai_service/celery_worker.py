@@ -4,6 +4,8 @@ import sys
 import tensorflow as tf
 from tensorflow.errors import InvalidArgumentError
 
+from log_logic.log_util import task_log
+
 sys.path.append("/app")  # for docker
 
 redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
@@ -36,7 +38,17 @@ def run_prediction_task(input_text, desired_emotion):
     try:
         from deployment.ai_module import run_prediction_pipeline
         return run_prediction_pipeline(sentiment_model, input_text, desired_emotion)
+
     except InvalidArgumentError:
         return {"success": False, "message": "please type in full sentences"}
+
+    except Exception as e:
+        task_log(
+            40,
+            "celery task failure",
+            task_id=run_prediction_task.request.id,
+            error=f"{e.__class__.__name__}: {str(e)}"
+        )
+        return {"success": False, "message": "AI task failed"}
 
 # celery -A celery_worker:celery worker -l INFO -P solo

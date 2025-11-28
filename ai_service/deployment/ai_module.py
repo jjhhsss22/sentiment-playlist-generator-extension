@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 
 from .model_prediction import predict, get_predicted_emotion, get_starting_coord, get_target_coord, EMOTIONS
 from .utils import to_list, round_list
+from .errors import *
 
 '''
 turned ai module "microservice-ready" in case I need to scale ml model and want to run development on a separate server
@@ -30,14 +31,26 @@ def calc_others_probability(array: list):
 
 # main pipeline for Flask's /api/home route
 def run_prediction_pipeline(model, input_text: str, desired_emotion: str):
+    try:
+        predictions = predict(model, input_text)
+    except Exception as e:
+        raise PredictionError(f"Model prediction error: {e}")
 
-    predictions = predict(model, input_text)
     predictions = to_list(predictions[0])
     likely_emotion = get_predicted_emotion(predictions)
-    starting_coord = get_starting_coord(predictions)
-    target_coord = get_target_coord(desired_emotion)
-    others_probability, valid_emotions, valid_predictions = calc_others_probability(predictions)
-    rounded_predictions = round_list(valid_predictions)
+
+    try:
+        starting_coord = get_starting_coord(predictions)
+        target_coord = get_target_coord(desired_emotion)
+    except Exception as e:
+        raise CoordinateError(f"Coordinate calculation error: {e}")
+
+    try:
+        others_probability, valid_emotions, valid_predictions = calc_others_probability(predictions)
+        rounded_predictions = round_list(valid_predictions)
+    except Exception as e:
+        raise ProbabilityError(f"Post-processing error: {e}")
+
     return {
         "predictions_list": rounded_predictions,
         "predicted_emotions": valid_emotions,

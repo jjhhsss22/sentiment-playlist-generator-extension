@@ -36,7 +36,8 @@ def home():
             # no need for IP whitelisting or internal secret key
             # because api servers only accessible from this gateway server
             "text": input_text,
-            "emotion": desired_emotion
+            "emotion": desired_emotion,
+            "user_id": user_id
         })
 
         try:
@@ -69,7 +70,8 @@ def home():
             '''
 
             time.sleep(0.5)
-            status_resp = requests.get(f"{AI_SERVER_URL}/task/{task_id}")
+            status_resp = requests.get(f"{AI_SERVER_URL}/task/{task_id}", json={
+                "user_id": user_id})
 
             try:
                 status_data = status_resp.json()

@@ -1,16 +1,11 @@
 from flask import request, current_app
-from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+import logging
 
-def log(level, event, **extra_kwargs):
-
-    user_id = None
-    try:
-        verify_jwt_in_request(optional=True)
-        user_id = get_jwt_identity()
-        if user_id is not None:
-            user_id = int(user_id)
-    except Exception:
-        pass
+def log(level, event, user_id=None, **extra_kwargs):
+    """
+    Different setup compared to other services
+    Because AI service container does not have flask_jwt_extended installed
+    """
 
     current_app.logger.log(
         level,  # level - INFO 20, WARNING 30, ERROR 40, CRITICAL 50
@@ -20,6 +15,21 @@ def log(level, event, **extra_kwargs):
             "method": request.method,
             "user_id": user_id,
             "ip": request.remote_addr,
+            **extra_kwargs
+        }
+    )
+
+def task_log(level, event, task_id=None, **extra_kwargs):
+    """
+    Logging utility for Celery tasks.
+    No Flask, no request, no JWT.
+    """
+
+    logging.getLogger().log(
+        level,
+        {
+            "event": event,
+            "task_id": task_id,
             **extra_kwargs
         }
     )
