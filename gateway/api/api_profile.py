@@ -6,6 +6,7 @@ from gateway.log_logic.log_util import log
 api_profile_bp = Blueprint('api_profile', __name__)
 
 DB_API_URL = "http://127.0.0.1:8003/playlist"
+AUTH_API_URL = "http://127.0.0.1:8004/jwt/validate"
 
 @api_profile_bp.route('/profile', methods=['GET'])
 @jwt_required()
@@ -16,7 +17,23 @@ def api_profile():
                         "location": "/unknown",
                         "message": "Forbidden access"}), 403
 
-    user_id = int(get_jwt_identity())
+    try:
+        cookies = request.cookies
+        auth_response = requests.get(AUTH_API_URL, cookies=cookies)
+
+        auth_results = auth_response.json()
+
+        if auth_response.status_code != 200:
+            return auth_results, auth_response.status_code
+
+        user_id = auth_results.get("user_id")
+
+    except Exception as e:
+        log(50, "auth server network error", error=str(e))
+        return jsonify({
+            "success": False,
+            "message": "authentication server error. Please try again later."
+        }), 500
 
     try:
         response = requests.post(

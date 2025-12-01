@@ -1,14 +1,21 @@
-from flask import Flask, request, jsonify
+from flask import Blueprint, request, jsonify
 
 from music_logic.music_module import generate_playlist_pipeline
 from log_logic.log_util import log
-from ms_init import create_ms
 
-app = create_ms()
+ms_bp = Blueprint("ms", __name__)
 
-@app.route('/create-playlist', methods=['POST'])
+@ms_bp.route('/create-playlist', methods=['POST'])
 def return_playlist():
-    data = request.get_json()
+    try:
+        data = request.get_json()
+    except Exception:
+        log(30, "gateway bad response")
+        return jsonify({
+            "success": False,
+            "message": "Bad response from gateway server. Please try again later."
+        }), 502
+
     origin = data.get("API-Requested-With", "")
     starting_coord = data.get("starting_coord")
     target_coord = data.get("target_coord")
@@ -23,7 +30,3 @@ def return_playlist():
     except Exception as e:  # no need for detailed error messaging for the music service
         log(40, "forbidden request received", error=str(e))
         return jsonify({"success": False, "message": "music server error. Please try again later"}), 500
-
-
-if __name__ == "__main__":
-    app.run(port=8002, debug=True)

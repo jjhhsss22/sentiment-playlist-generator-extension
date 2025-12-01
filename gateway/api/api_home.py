@@ -1,18 +1,18 @@
-from flask import request, jsonify, Blueprint, current_app
+from flask import request, jsonify, Blueprint
 import requests
 import time
-from flask_jwt_extended import jwt_required, get_jwt_identity
+
 from gateway.log_logic.log_util import log
 
 api_home_bp = Blueprint('api_home', __name__)
 
-AI_SERVER_URL = "http://127.0.0.1:8001"
-MUSIC_SERER_URL = "http://127.0.0.1:8002/create-playlist"
+AI_API_URL = "http://127.0.0.1:8001"
+MUSIC_API_URL = "http://127.0.0.1:8002/create-playlist"
 DB_API_URL = "http://127.0.0.1:8003/new-playlist"
+AUTH_API_URL = "http://127.0.0.1:8004/jwt/validate"
 
 
 @api_home_bp.route('/home', methods=['GET', 'POST'])
-@jwt_required()
 def home():
     start_time = time.time()
 
@@ -23,15 +23,35 @@ def home():
                         "location": "/unknown",
                         "message": "Forbidden access"}), 403
 
-    user_id = int(get_jwt_identity())
-    data = request.get_json()
-    input_text = data.get("text", "").strip()
-    desired_emotion = data.get("emotion", None)
+# Auth ------------------------------------------------------------------------
+
+    try:
+        cookies = request.cookies
+        auth_response = requests.get(AUTH_API_URL, cookies=cookies)
+
+        auth_results = auth_response.json()
+
+        if auth_response.status_code != 200:
+            # Auth service already returns correct json
+            return auth_results, auth_response.status_code
+
+        user_id = auth_results.get("user_id")
+
+    except Exception as e:
+        log(50, "auth server network error", error=str(e))
+        return jsonify({
+            "success": False,
+            "message": "authentication server error. Please try again later."
+        }), 500
 
 # AI ------------------------------------------------------------------------
 
     try:
-        ai_response = requests.post(f"{AI_SERVER_URL}/predict", json={
+        data = request.get_json()
+        input_text = data.get("text", "").strip()
+        desired_emotion = data.get("emotion", None)
+
+        ai_response = requests.post(f"{AI_API_URL}/predict", json={
             "API-Requested-With": "Home Gateway",
             # no need for IP whitelisting or internal secret key
             # because api servers only accessible from this gateway server
@@ -70,7 +90,7 @@ def home():
             '''
 
             time.sleep(0.5)
-            status_resp = requests.get(f"{AI_SERVER_URL}/task/{task_id}", json={
+            status_resp = requests.get(f"{AI_API_URL}/task/{task_id}", json={
                 "user_id": user_id})
 
             try:
@@ -118,7 +138,7 @@ def home():
 # MUSIC ------------------------------------------------------------------------
 
     try:
-        music_response = requests.post(MUSIC_SERER_URL, json={
+        music_response = requests.post(MUSIC_API_URL, json={
             "API-Requested-With": "Home Gateway",
             "starting_coord": starting_coord,
             "target_coord": target_coord,

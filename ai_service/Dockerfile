@@ -31,4 +31,4 @@ COPY . .
 EXPOSE 8001
 
 
-CMD ["python", "api_ai_service_interface.py"]
+CMD ["python", "run_ai.py"]

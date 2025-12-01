@@ -1,13 +1,11 @@
-import os
-from flask import request, jsonify
+from flask import Blueprint, request, jsonify
 
 from celery_worker import run_prediction_task
 from log_logic.log_util import log
-from ai_init import create_ais
 
-app = create_ais()
+ai_bp = Blueprint('ai', __name__)
 
-@app.route("/predict", methods=["POST"])
+@ai_bp.route("/predict", methods=["POST"])
 def return_prediction():
     try:
         data = request.get_json()
@@ -40,7 +38,7 @@ def return_prediction():
 
 
 # celery prediction task status
-@app.route("/task/<task_id>", methods=["GET"])
+@ai_bp.route("/task/<task_id>", methods=["GET"])
 def get_task_status(task_id):
     data = request.get_json()
     user_id = data.get("user_id")
@@ -59,10 +57,6 @@ def get_task_status(task_id):
 
 
 # AI api server health check
-@app.route("/health", methods=["GET"])
+@ai_bp.route("/health", methods=["GET"])
 def health_check():
     return jsonify({"status": "ok"}), 200
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8001))
-    app.run(host="0.0.0.0", port=port, debug=False)

@@ -1,12 +1,12 @@
-from flask import request, jsonify
+from flask import Blueprint, request, jsonify
 
 from db_service.db_structure.db_module import get_user_info, get_playlists, create_user, create_playlist, save
 from log_logic.log_util import log
-from db_init import create_db
+from __init__ import create_db
 
-app = create_db()
+db_bp = Blueprint('db', __name__)
 
-@app.route('/v1/query', methods=['POST'])
+@db_bp.route('/v1/query', methods=['POST'])
 def return_user():
     try:
         data = request.get_json()
@@ -89,7 +89,7 @@ def return_user():
 #         return jsonify({"success": False, "message": "Internal db server error"}), 500
 
 
-@app.route('/new-user', methods=['POST'])
+@db_bp.route('/new-user', methods=['POST'])
 def new_user():
     try:
         data = request.get_json()
@@ -114,13 +114,13 @@ def new_user():
         new_user = create_user(email, username, hashed_password)
         save(new_user)
 
-        return jsonify({"success": True, "message": "User created successfully", "id": new_user.id}), 201
+        return jsonify({"success": True, "message": "User created successfully", "user_id": new_user.id}), 201
     except Exception as e:
         log(40, "database user creation error", error=str(e))
         return jsonify({"success": False, "message": "Failed to create user"}), 500
 
 
-@app.route('/playlist', methods=['POST'])
+@db_bp.route('/playlist', methods=['POST'])
 def return_playlists():
     try:
         data = request.get_json()
@@ -146,7 +146,7 @@ def return_playlists():
         return jsonify({"success": False, "message": "Playlist database error" }), 500
 
 
-@app.route('/new-playlist', methods=['POST'])
+@db_bp.route('/new-playlist', methods=['POST'])
 def new_playlist():
     try:
         data = request.get_json()
@@ -176,9 +176,3 @@ def new_playlist():
         return jsonify({"success": True, "message": "Playlist created successfully"}), 201
     except Exception:
         return jsonify({"success": False, "message": "Failed to create playlist"}), 500
-
-
-
-
-if __name__ == "__main__":
-    app.run(port=8003, debug=True)

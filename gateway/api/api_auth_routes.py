@@ -1,23 +1,29 @@
-from flask import request, jsonify, Blueprint, current_app, render_template
-from flask_jwt_extended import create_access_token, set_access_cookies
-from datetime import timedelta
+from flask import (
+    request,
+    jsonify,
+    Blueprint,
+    current_app)
 import requests
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from gateway.log_logic.log_util import log
-from gateway.api.auth.auth_verification import is_valid_username, is_valid_password
+from auth_service.api.auth_logic.auth_verification import is_valid_username, is_valid_password
 
-api_auth_bp = Blueprint('api_auth', __name__)
+api_auth_bp = Blueprint('auth', __name__)
 
 DB_API_URL = "http://127.0.0.1:8003"
+AUTH_API_URL = "http://127.0.0.1:8004/jwt"
 
 @api_auth_bp.route('/signup', methods=['POST'])
 def signup():
     if request.headers.get("X-Requested-With") != "ReactApp":
         log(30, "forbidden request received")
-        return render_template("unknown.html"), 403
+        return jsonify({"success": False,
+                        "location": "/unknown",
+                        "message": "Forbidden access"}), 403
 
-    try: data = request.get_json()  # data from the form
+    try:
+        data = request.get_json()  # data from the form
     except Exception:
         log(40, "front bad response")
         return jsonify({"success": False, "message": "Invalid request. Please try again"}), 400
@@ -94,18 +100,62 @@ def signup():
             log(40, "db error", status_code=create_response.status_code)
             return jsonify({"success": False, "message": create_message}), create_response.status_code
 
-        user_id = create_result.get("id")
-        access_token = create_access_token(identity=str(user_id), expires_delta=timedelta(hours=6))
+    except Exception as e:
+        log(50, "db network error", error=str(e))
+        return jsonify({"success": False, "message": "Database server error. Please try again later."}), 500
 
-        resp = jsonify({"success": True,
-                        "message": f"Hello {username}, your account has been created!"})
-        set_access_cookies(resp, access_token)
+    try:
+        user_id = create_result.get("user_id")
+
+        auth_response = requests.post(
+            f"{AUTH_API_URL}/assign",
+            json={
+                "API-Requested-With": "Home Gateway",
+                "user_id": user_id,
+                "username": username
+            }
+        )
+
+        try:
+            auth_result = auth_response.json()
+        except Exception:
+            log(40, "auth bad response")
+            return jsonify({"success": False, "message": "Auth service error"}), 502
+
+        if not auth_response.ok:
+            if auth_result.get("forbidden", False):
+                log(30, "auth forbidden")
+                return jsonify({
+                    "success": False,
+                    "location": "/unknown",
+                    "message": "Forbidden access"
+                }), 403
+
+            assign_message = auth_result.get("message", "Failed to assign JWT")
+            log(40, "auth error", status_code=auth_response.status_code)
+            return jsonify({"success": False, "message": assign_message}), auth_response.status_code
+
+        resp = jsonify({
+            "success": True,
+            "message": f"Hello {username}, your account has been created!",
+        })
+
+        # Forward cookies set by Auth:
+        for cookie in auth_response.cookies:
+            resp.set_cookie(
+                cookie.name,
+                cookie.value,
+                **cookie.__dict__.get('_rest', {})  # preserve cookie flags
+            )
 
         return resp, 201
 
     except Exception as e:
-        log(50, "db network error", error=str(e))
-        return jsonify({"success": False, "message": "Database server error. Please try again later."}), 500
+        log(40, "auth jwt assignment error", error=str(e))
+        return jsonify({
+            "success": False,
+            "message": "Auth service error. Please try again later."
+        }), 403
 
 
 @api_auth_bp.route('/login', methods=['POST'])
@@ -113,9 +163,12 @@ def login():
     if request.headers.get("X-Requested-With") != "ReactApp":
         current_app.logger.warning(f"Forbidden access: 403")
 
-        return render_template("unknown.html"), 403
+        return jsonify({"success": False,
+                        "location": "/unknown",
+                        "message": "Forbidden access"}), 403
 
-    try: data = request.get_json()
+    try:
+        data = request.get_json()
     except Exception:
         log(40, "front bad response")
         return jsonify({"success": False, "message": "Invalid request. Please try again"}), 400
@@ -160,22 +213,75 @@ def login():
         if not check_password_hash(user["password_hash"], password):
             return jsonify({"success": False, "message": "Invalid password"}), 401
 
-        user_id = user['id']
-        access_token = create_access_token(identity=str(user_id), expires_delta=timedelta(hours=6))
-
-        resp = jsonify({"success": True,
-                        "message": f"Welcome {username}, you are logged in!"})
-        set_access_cookies(resp, access_token)
-
-        return resp, 200
-
     except Exception as e:
         log(50, "db network error", error=str(e))
         return jsonify({"success": False, "message": "Database server error. Please try again later."}), 500
 
+    try:
+        user_id = user["id"]
 
-# @api_auth_bp.route('/logout', methods=['POST'])
-# @login_required
-# def logout():
-#     logout_user()
-#     return jsonify({"success": True, "message": "Logged out"})
+        auth_response = requests.post(
+            f"{AUTH_API_URL}/assign",
+            json={
+                "API-Requested-With": "Home Gateway",
+                "user_id": user_id,
+                "username": username
+            }
+        )
+
+        try:
+            auth_result = auth_response.json()
+        except Exception:
+            log(40, "auth bad response")
+            return jsonify({"success": False, "message": "Auth service error"}), 502
+
+        if not auth_response.ok:
+            if auth_result.get("forbidden", False):
+                log(30, "auth forbidden")
+                return jsonify({
+                    "success": False,
+                    "location": "/unknown",
+                    "message": "Forbidden access"
+                }), 403
+
+            assign_message = auth_result.get("message", "Failed to assign JWT")
+            log(40, "auth error", status_code=auth_response.status_code)
+            return jsonify({"success": False, "message": assign_message}), auth_response.status_code
+
+        resp = jsonify({
+            "success": True,
+            "message": f"Welcome {username}, you are logged in!",
+        })
+        for cookie in auth_response.cookies:
+            resp.set_cookie(
+                cookie.name,
+                cookie.value,
+                **cookie.__dict__.get('_rest', {})  # preserve cookie flags
+            )
+
+        return resp, 200
+
+    except Exception as e:
+        log(40, "auth jwt assignment error", error=str(e))
+        return jsonify({
+            "success": False,
+            "message": "Auth service error. Please try again later."
+        }), 403
+
+
+@api_auth_bp.route('/logout', methods=['POST'])
+def logout():
+    try:
+        auth_response = requests.post(
+            f"{AUTH_API_URL}/remove",
+            cookies=request.cookies,
+        )
+
+        return jsonify(auth_response.json()), auth_response.status_code
+
+    except Exception as e:
+        log(40, "auth logout error", error=str(e))
+        return jsonify({
+            "success": False,
+            "message": "Logout failed. Please try again."
+        }), 500

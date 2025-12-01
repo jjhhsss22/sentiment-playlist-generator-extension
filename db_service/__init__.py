@@ -21,4 +21,7 @@ def create_db():
 
     db.init_app(app)
 
+    from api_repository_interface import db_bp
+    app.register_blueprint(db_bp)
+
     return app
