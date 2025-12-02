@@ -10,7 +10,7 @@ export default defineConfig({
     ],
 
   build: {
-    outDir: '../static',  // output directly to Flask static folder
+    outDir: '../gateway/static',  // output directly to Flask static folder
     emptyOutDir: true,           // clear previous build
     rollupOptions: {
       input: './src/main.jsx',       // main entry

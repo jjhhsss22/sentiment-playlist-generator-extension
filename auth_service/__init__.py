@@ -1,7 +1,6 @@
-from flask import Flask, current_app, request, jsonify
+from flask import Flask, jsonify
 from flask_jwt_extended import JWTManager
 from log_logic.auth_logging_config import configure_logging
-
 import logging
 
 def create_auth():
@@ -24,7 +23,9 @@ def create_auth():
     jwt = JWTManager(app)
 
     from api.jwt_oauth import jwt_bp
+    from api.user_auth import user_auth_bp
     app.register_blueprint(jwt_bp, url_prefix="/jwt")
+    app.register_blueprint(user_auth_bp, url_prefix="/user")
 
     @jwt.unauthorized_loader
     def unauthorized_callback(err_msg):

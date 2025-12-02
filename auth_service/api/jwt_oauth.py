@@ -7,14 +7,15 @@ from flask_jwt_extended import (
     set_access_cookies
 )
 from datetime import timedelta
+
 from log_logic.log_util import log
 
 jwt_bp = Blueprint('jwt', __name__)
 
 
-@jwt_bp.route("/validate", methods=["GET"])
+@jwt_bp.route("/verify", methods=["GET"])
 @jwt_required()
-def validate_jwt():
+def verify_jwt():
     user_id = get_jwt_identity()
     return jsonify({"success": True, "user_id": user_id}), 200
 
@@ -38,14 +39,11 @@ def assign_jwt():
             expires_delta=timedelta(hours=6)
         )
 
-        # Set the HttpOnly cookie here
-        resp = jsonify({
+        return jsonify({
             "success": True,
-            "message": f"Token assigned for {username}"
-        })
-        set_access_cookies(resp, access_token)
-
-        return resp, 200
+            "message": f"Token assigned for {username} with id {user_id}",
+            "access_token": access_token
+        }), 200
 
     except Exception as e:
         log(50, "failed to assign jwt", error=e)
@@ -53,7 +51,11 @@ def assign_jwt():
 
 
 @jwt_bp.route("/remove", methods=["POST"])
-def logout():
-    resp = jsonify({"success": True, "message": "Logged out"})
-    unset_jwt_cookies(resp)
-    return resp, 200
+def remove_jwt():
+    try:
+        resp = jsonify({"success": True, "message": "Logged out"})
+        unset_jwt_cookies(resp)
+        return resp, 200
+    except Exception as e:
+        log(50, "failed to remove jwt", error=e)
+        return jsonify({"success": False, "message": "failed to log out. Please try again."}), 500

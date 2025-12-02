@@ -2,12 +2,14 @@ import { navTo } from "./navigate";
 import { showMessage } from "./showMessage.jsx"
 
 export async function handleLogout() {
-  await fetch("/api/logout", {
+
+  const res = await fetch("/api/logout", {
     method: "POST",
     credentials: "include"
   });
 
-  showMessage("success", "You have been successfully logged out.", true);
-
-  navTo("/login");
+  if (res.status === 200) {
+    showMessage("success", "You have been successfully logged out.", true);
+    navTo("/login");
+  }
 }

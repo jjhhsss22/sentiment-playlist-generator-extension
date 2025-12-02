@@ -6,7 +6,7 @@ from gateway.log_logic.log_util import log
 api_profile_bp = Blueprint('api_profile', __name__)
 
 DB_API_URL = "http://127.0.0.1:8003/playlist"
-AUTH_API_URL = "http://127.0.0.1:8004/jwt/validate"
+AUTH_API_URL = "http://127.0.0.1:8004/jwt/verify"
 
 @api_profile_bp.route('/profile', methods=['GET'])
 @jwt_required()
@@ -38,8 +38,10 @@ def api_profile():
     try:
         response = requests.post(
             DB_API_URL,
+            headers={
+                "API-Requested-With": "Home Gateway"
+            },
             json={
-                "API-Requested-With": "Home Gateway",
                 "user_id": user_id
             })
 

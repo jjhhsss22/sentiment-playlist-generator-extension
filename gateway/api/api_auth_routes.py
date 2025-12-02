@@ -4,15 +4,13 @@ from flask import (
     Blueprint,
     current_app)
 import requests
-from werkzeug.security import check_password_hash, generate_password_hash
 
 from gateway.log_logic.log_util import log
-from auth_service.api.auth_logic.auth_verification import is_valid_username, is_valid_password
 
 api_auth_bp = Blueprint('auth', __name__)
 
 DB_API_URL = "http://127.0.0.1:8003"
-AUTH_API_URL = "http://127.0.0.1:8004/jwt"
+AUTH_API_URL = "http://127.0.0.1:8004"
 
 @api_auth_bp.route('/signup', methods=['POST'])
 def signup():
@@ -26,104 +24,66 @@ def signup():
         data = request.get_json()  # data from the form
     except Exception:
         log(40, "front bad response")
-        return jsonify({"success": False, "message": "Invalid request. Please try again"}), 400
-
-    email = data.get('email')
-    username = data.get('username')
-    password = data.get('password')
-    confirm_password = data.get('confirmPassword')  # id from the HTML file
-
-    if not is_valid_username(username):
-        return jsonify({"success": False, "message": "Invalid username — cannot contain spaces."}), 401
-
-    if not is_valid_password(password, confirm_password):
-        return jsonify({"success": False, "message": "Invalid password or mismatch."}), 401
+        return jsonify({"success": False, "message": "Bad response. Please try again"}), 502
 
     try:
-        query_response = requests.post(
-            f"{DB_API_URL}/v1/query",
-            json={
-                "API-Requested-With": "Home Gateway",
-                "email": email
-            })
+        validate_response = requests.post(
+            f"{AUTH_API_URL}/user/validate",
+            headers={
+                "API-Requested-With": "Home Gateway"
+            },
+            json=data
+        )
 
         try:
-            query_result = query_response.json()
+            validate_result = validate_response.json()
         except Exception:
-            log(40, "db bad response")
-            return jsonify({"success": False, "message": "Database server error"}), 502
+            log(40, "auth bad response")
+            return jsonify({"success": False, "message": "Authentication server error"}), 502
 
-        if not query_response.ok:
-            if query_result.get("forbidden", False):
-                log(30, "db forbidden")
+        if not validate_response.ok:
+            if validate_result.get("forbidden", False):
+                log(30, "authentication forbidden")
                 return jsonify({"success": False,
                                 "location": "/unknown",
                                 "message": "Forbidden access"}), 403
 
-            verify_message = query_result.get("message", "Failed to access database")
-            log(40, "db error", status_code=query_response.status_code)
-            return jsonify({"success": False, "message": verify_message}), query_response.status_code
+            validate_message = validate_result.get("message", "Failed to access authentication server")
+            log(40, "auth error", status_code=validate_response.status_code)
+            return jsonify({"success": False, "message": validate_message}), validate_response.status_code
 
-        if query_result.get("user"):
-            return jsonify({"success": False, "message": "Email already registered"}), 409
+        email = data.get('email')
+        username = data.get('username')
+        password = data.get('password')
+        confirm_password = data.get('confirmPassword')
 
-    except Exception as e:
-        log(50, "db network error", error=str(e))
-        return jsonify({"success": False, "message": "Database server error. Please try again later."}), 500
-
-    try:
-        hashed_password = generate_password_hash(password)
-
-        create_response = requests.post(
-            f"{DB_API_URL}/new-user",
-            json={
-                "API-Requested-With": "Home Gateway",
-                "email": email,
-                "username": username,
-                "hashed_password": hashed_password
-            })
-
-        try:
-            create_result = create_response.json()
-        except Exception:
-            log(40, "db bad response")
-            return jsonify({"success": False, "message": "Database server error"}), 502
-
-        if not create_response.ok:
-            if create_result.get("forbidden", False):
-                log(30, "db forbidden")
-                return jsonify({"success": False,
-                                "location": "/unknown",
-                                "message": "Forbidden access"}), 403
-
-            create_message = create_result.get("message", "Failed to create new user")
-            log(40, "db error", status_code=create_response.status_code)
-            return jsonify({"success": False, "message": create_message}), create_response.status_code
+        user_id =validate_result.get("user_id")
 
     except Exception as e:
         log(50, "db network error", error=str(e))
-        return jsonify({"success": False, "message": "Database server error. Please try again later."}), 500
+        return jsonify({"success": False, "message": "Authentication server error. Please try again later."}), 500
 
     try:
-        user_id = create_result.get("user_id")
 
-        auth_response = requests.post(
-            f"{AUTH_API_URL}/assign",
+        assign_response = requests.post(
+            f"{AUTH_API_URL}/jwt/assign",
+            headers={
+                "API-Requested-With": "Home Gateway"
+            },
             json={
-                "API-Requested-With": "Home Gateway",
                 "user_id": user_id,
                 "username": username
             }
         )
 
         try:
-            auth_result = auth_response.json()
+            assign_result = assign_response.json()
         except Exception:
             log(40, "auth bad response")
             return jsonify({"success": False, "message": "Auth service error"}), 502
 
-        if not auth_response.ok:
-            if auth_result.get("forbidden", False):
+        if not assign_response.ok:
+            if assign_result.get("forbidden", False):
                 log(30, "auth forbidden")
                 return jsonify({
                     "success": False,
@@ -131,9 +91,9 @@ def signup():
                     "message": "Forbidden access"
                 }), 403
 
-            assign_message = auth_result.get("message", "Failed to assign JWT")
-            log(40, "auth error", status_code=auth_response.status_code)
-            return jsonify({"success": False, "message": assign_message}), auth_response.status_code
+            assign_message = assign_result.get("message", "Failed to assign JWT")
+            log(40, "auth error", status_code=assign_response.status_code)
+            return jsonify({"success": False, "message": assign_message}), assign_response.status_code
 
         resp = jsonify({
             "success": True,
@@ -141,7 +101,7 @@ def signup():
         })
 
         # Forward cookies set by Auth:
-        for cookie in auth_response.cookies:
+        for cookie in assign_response.cookies:
             resp.set_cookie(
                 cookie.name,
                 cookie.value,
@@ -171,59 +131,49 @@ def login():
         data = request.get_json()
     except Exception:
         log(40, "front bad response")
-        return jsonify({"success": False, "message": "Invalid request. Please try again"}), 400
-
-    email = data.get('email')
-    username = data.get('username')
-    password = data.get('password')
+        return jsonify({"success": False, "message": "Bad response. Please try again"}), 502
 
     try:
-        query_response = requests.post(
-            f"{DB_API_URL}/v1/query",
-            json={
-                "API-Requested-With": "Home Gateway",
-                "email": email
-            })
+        verify_response = requests.post(
+            f"{AUTH_API_URL}/user/verify",
+            headers={
+                "API-Requested-With": "Home Gateway"
+            },
+            json=data
+        )
 
         try:
-            query_result = query_response.json()
+            verify_result = verify_response.json()
         except Exception:
-            log(40, "db bad response")
-            return jsonify({"success": False, "message": "Database server error"}), 502
+            log(40, "auth bad response")
+            return jsonify({"success": False, "message": "Authentication server error"}), 502
 
-        if not query_response.ok:
-            if query_result.get("forbidden", False):
-                log(30, "db forbidden")
+        if not verify_response.ok:
+            if verify_result.get("forbidden", False):
+                log(30, "auth forbidden")
                 return jsonify({"success": False,
                                 "location": "/unknown",
                                 "message": "Forbidden access"}), 403
 
-            verify_message = query_result.get("message", "Failed to access database")
-            log(40, "db error", status_code=query_response.status_code)
-            return jsonify({"success": False, "message": verify_message}), query_response.status_code
+            verify_message = verify_result.get("message", "Failed to access authentication server")
+            log(40, "auth error", status_code=verify_response.status_code)
+            return jsonify({"success": False, "message": verify_message}), verify_response.status_code
 
-        user = query_result.get("user")
-
-        if not user:
-            return jsonify({"success": False, "message": "Invalid email"}), 401
-
-        if user["username"] != username:
-            return jsonify({"success": False, "message": "Invalid username"}), 401
-
-        if not check_password_hash(user["password_hash"], password):
-            return jsonify({"success": False, "message": "Invalid password"}), 401
+        user_id = verify_result.get("user_id")
+        username = verify_result.get("username")
 
     except Exception as e:
-        log(50, "db network error", error=str(e))
-        return jsonify({"success": False, "message": "Database server error. Please try again later."}), 500
+        log(50, "auth network error", error=str(e))
+        return jsonify({"success": False, "message": "Authentication network error. Please try again later."}), 500
 
     try:
-        user_id = user["id"]
 
         auth_response = requests.post(
-            f"{AUTH_API_URL}/assign",
+            f"{AUTH_API_URL}/jwt/assign",
+            headers={
+                "API-Requested-With": "Home Gateway"
+            },
             json={
-                "API-Requested-With": "Home Gateway",
                 "user_id": user_id,
                 "username": username
             }
@@ -252,6 +202,7 @@ def login():
             "success": True,
             "message": f"Welcome {username}, you are logged in!",
         })
+
         for cookie in auth_response.cookies:
             resp.set_cookie(
                 cookie.name,
@@ -271,10 +222,21 @@ def login():
 
 @api_auth_bp.route('/logout', methods=['POST'])
 def logout():
+    access_cookie = request.cookies.get("access_token_cookie")
+
+    if not access_cookie:
+        return jsonify({
+            "success": False,
+            "message": "No active session found"
+        }), 400
+
     try:
         auth_response = requests.post(
-            f"{AUTH_API_URL}/remove",
+            f"{AUTH_API_URL}/jwt/remove",
             cookies=request.cookies,
+            headers={
+                "API-Requested-With": "Home Gateway"
+            }
         )
 
         return jsonify(auth_response.json()), auth_response.status_code
@@ -285,3 +247,28 @@ def logout():
             "success": False,
             "message": "Logout failed. Please try again."
         }), 500
+    
+@api_auth_bp.route('/verify', methods=['GET'])
+def verify_user():
+    try:
+        cookies = request.cookies
+
+        resp = requests.get(f"{AUTH_API_URL}/jwt/verify", cookies=cookies, timeout=5)
+
+        # Pass through the response from auth server
+        if resp.status_code == 200:
+            # Auth server verified JWT
+            data = resp.json()
+            return jsonify({"success": True, "user_id": data.get("user_id")}), 200
+        else:
+            # Invalid or expired JWT
+            return jsonify({
+                "success": False,
+                "message": "Unauthorized access. Please log in again."
+            }), 401
+    except requests.RequestException as e:
+        # Network error or auth server down
+        return jsonify({
+            "success": False,
+            "message": "Authentication server unreachable."
+        }), 503

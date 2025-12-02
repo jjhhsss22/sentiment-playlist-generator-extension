@@ -16,13 +16,16 @@ def return_playlist():
             "message": "Bad response from gateway server. Please try again later."
         }), 502
 
-    origin = data.get("API-Requested-With", "")
+    origin = request.headers.get("API-Requested-With", "")
+
+    if origin != "Home Gateway":
+        log(30, "forbidden request not from gateway")
+        return jsonify({"forbidden": True}), 403
+
     starting_coord = data.get("starting_coord")
     target_coord = data.get("target_coord")
 
-    if origin != "Home Gateway":
-        log(30, "forbidden request received")
-        return jsonify({"forbidden": True}), 403
+
 
     try:
         result = generate_playlist_pipeline(starting_coord, target_coord)
