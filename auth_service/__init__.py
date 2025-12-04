@@ -16,9 +16,9 @@ def create_auth():
     # JWT configuration
     app.config["JWT_SECRET_KEY"] = "super-secret-key"
     app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
-    app.config["JWT_COOKIE_SECURE"] = True
-    app.config["JWT_COOKIE_SAMESITE"] = "None"
     app.config["JWT_COOKIE_HTTPONLY"] = True
+    app.config["JWT_COOKIE_SECURE"] = True   # True
+    app.config["JWT_COOKIE_SAMESITE"] = "None"  # "None" for production
 
     jwt = JWTManager(app)
 

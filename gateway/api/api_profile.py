@@ -1,6 +1,6 @@
-from flask import jsonify, request, Blueprint, current_app
+from flask import jsonify, request, Blueprint
 import requests
-from flask_jwt_extended import jwt_required, get_jwt_identity
+
 from gateway.log_logic.log_util import log
 
 api_profile_bp = Blueprint('api_profile', __name__)
@@ -9,7 +9,6 @@ DB_API_URL = "http://127.0.0.1:8003/playlist"
 AUTH_API_URL = "http://127.0.0.1:8004/jwt/verify"
 
 @api_profile_bp.route('/profile', methods=['GET'])
-@jwt_required()
 def api_profile():
     if request.headers.get("X-Requested-With") != "ReactApp":
         log(30, "forbidden request received")
@@ -18,13 +17,20 @@ def api_profile():
                         "message": "Forbidden access"}), 403
 
     try:
-        cookies = request.cookies
-        auth_response = requests.get(AUTH_API_URL, cookies=cookies)
+        cookies = {
+            "access_token_cookie": request.cookies.get("access_token_cookie")
+        }
+
+        auth_response = requests.get(
+            AUTH_API_URL,
+            cookies=cookies,
+            timeout=5
+        )
 
         auth_results = auth_response.json()
 
         if auth_response.status_code != 200:
-            return auth_results, auth_response.status_code
+            return jsonify(auth_results), auth_response.status_code
 
         user_id = auth_results.get("user_id")
 

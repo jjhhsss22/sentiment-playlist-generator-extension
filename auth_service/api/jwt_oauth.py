@@ -39,11 +39,14 @@ def assign_jwt():
             expires_delta=timedelta(hours=6)
         )
 
-        return jsonify({
+        resp = jsonify({
             "success": True,
             "message": f"Token assigned for {username} with id {user_id}",
-            "access_token": access_token
-        }), 200
+        })
+        resp.status_code = 200
+
+        set_access_cookies(resp, access_token)
+        return resp
 
     except Exception as e:
         log(50, "failed to assign jwt", error=e)
@@ -54,8 +57,9 @@ def assign_jwt():
 def remove_jwt():
     try:
         resp = jsonify({"success": True, "message": "Logged out"})
+        resp.status_code = 200
         unset_jwt_cookies(resp)
-        return resp, 200
+        return resp
     except Exception as e:
         log(50, "failed to remove jwt", error=e)
         return jsonify({"success": False, "message": "failed to log out. Please try again."}), 500

@@ -99,16 +99,14 @@ def signup():
             "success": True,
             "message": f"Hello {username}, your account has been created!",
         })
+        resp.status_code = 201  # hard code status_code on flask response object instead of tuple
+                                # as we cannot risk headers being stripped in tuple form
 
-        # Forward cookies set by Auth:
-        for cookie in assign_response.cookies:
-            resp.set_cookie(
-                cookie.name,
-                cookie.value,
-                **cookie.__dict__.get('_rest', {})  # preserve cookie flags
-            )
+        # Forward Set-Cookie header without modifying it
+        if "Set-Cookie" in assign_response.headers:
+            resp.headers.add("Set-Cookie", assign_response.headers["Set-Cookie"])
 
-        return resp, 201
+        return resp
 
     except Exception as e:
         log(40, "auth jwt assignment error", error=str(e))
@@ -202,15 +200,12 @@ def login():
             "success": True,
             "message": f"Welcome {username}, you are logged in!",
         })
+        resp.status_code = 200
 
-        for cookie in auth_response.cookies:
-            resp.set_cookie(
-                cookie.name,
-                cookie.value,
-                **cookie.__dict__.get('_rest', {})  # preserve cookie flags
-            )
+        if "Set-Cookie" in auth_response.headers:
+            resp.headers.add("Set-Cookie", auth_response.headers["Set-Cookie"])
 
-        return resp, 200
+        return resp
 
     except Exception as e:
         log(40, "auth jwt assignment error", error=str(e))
@@ -231,44 +226,63 @@ def logout():
         }), 400
 
     try:
-        auth_response = requests.post(
+        cookies = {
+            "access_token_cookie": access_cookie
+        }
+
+        resp = requests.post(
             f"{AUTH_API_URL}/jwt/remove",
-            cookies=request.cookies,
-            headers={
-                "API-Requested-With": "Home Gateway"
-            }
+            cookies=cookies,
+            timeout=5
         )
 
-        return jsonify(auth_response.json()), auth_response.status_code
+        forward_resp = jsonify(resp.json())
+        forward_resp.status_code = resp.status_code
+
+        log(50, "fsf", status_code=forward_resp.status_code)
+
+        if "Set-Cookie" in resp.headers:
+            forward_resp.headers.add("Set-Cookie", resp.headers["Set-Cookie"])
+
+        return forward_resp
 
     except Exception as e:
-        log(40, "auth logout error", error=str(e))
+        log(50, "auth logout error", error=str(e))
         return jsonify({
             "success": False,
             "message": "Logout failed. Please try again."
         }), 500
-    
+
+
 @api_auth_bp.route('/verify', methods=['GET'])
 def verify_user():
     try:
-        cookies = request.cookies
+        # Forward the exact Cookie header the browser originally sent
+        cookies = {
+            "access_token_cookie": request.cookies.get("access_token_cookie")
+        }
 
-        resp = requests.get(f"{AUTH_API_URL}/jwt/verify", cookies=cookies, timeout=5)
+        resp = requests.get(
+            f"{AUTH_API_URL}/jwt/verify",
+            cookies=cookies,
+            timeout=5
+        )
 
-        # Pass through the response from auth server
-        if resp.status_code == 200:
-            # Auth server verified JWT
-            data = resp.json()
-            return jsonify({"success": True, "user_id": data.get("user_id")}), 200
-        else:
-            # Invalid or expired JWT
-            return jsonify({
-                "success": False,
-                "message": "Unauthorized access. Please log in again."
-            }), 401
-    except requests.RequestException as e:
-        # Network error or auth server down
+        try:
+            result = resp.json()
+        except Exception:
+            log(40, "auth bad response")
+            return jsonify({"success": False, "message": "auth service error"}), 502
+
+        if not resp.status_code == 200:
+            log(40, "auth error", status_code=resp.status_code)
+            return jsonify(resp), resp.status_code
+
+        return jsonify({"success": True, "user_id": result.get("user_id")}), resp.status_code
+
+    except Exception as e:
+        log(40, "auth verify error", error=str(e))
         return jsonify({
             "success": False,
-            "message": "Authentication server unreachable."
+            "message": "Authentication server error."
         }), 503

@@ -26,13 +26,19 @@ def home():
 # Auth ------------------------------------------------------------------------
 
     try:
-        cookies = request.cookies
-        auth_response = requests.get(AUTH_API_URL, cookies=cookies)
+        cookies = {
+            "access_token_cookie": request.cookies.get("access_token_cookie")
+        }
+
+        auth_response = requests.get(
+            AUTH_API_URL,
+            cookies=cookies,
+            timeout=5
+        )
 
         auth_results = auth_response.json()
 
         if auth_response.status_code != 200:
-            # Auth service already returns correct json
             return auth_results, auth_response.status_code
 
         user_id = auth_results.get("user_id")
