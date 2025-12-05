@@ -38,6 +38,11 @@ export default function Profile() {
         showMessage(setSuccess, "Playlists fetched successfully");
 
       } catch (err) {
+        if (!err.response) {
+          showMessage(setGeneral, "Network error. Please try again.");
+          return;
+        }
+
         console.error("Profile request error:", err);
         showMessage(setGeneral, err?.response?.data?.message || "Failed to fetch profile");
         setLoading(false);

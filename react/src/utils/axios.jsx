@@ -33,7 +33,6 @@ api.interceptors.response.use(
     const res = error.response;
 
     if (!res) {
-      showMessage("general", "Network error", true);
       return Promise.reject(error);
     }
 

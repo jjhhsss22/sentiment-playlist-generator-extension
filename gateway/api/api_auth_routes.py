@@ -1,8 +1,4 @@
-from flask import (
-    request,
-    jsonify,
-    Blueprint,
-    current_app)
+from flask import request, jsonify, Blueprint
 import requests
 
 from gateway.log_logic.log_util import log
@@ -119,7 +115,7 @@ def signup():
 @api_auth_bp.route('/login', methods=['POST'])
 def login():
     if request.headers.get("X-Requested-With") != "ReactApp":
-        current_app.logger.warning(f"Forbidden access: 403")
+        log(30, "forbidden request received")
 
         return jsonify({"success": False,
                         "location": "/unknown",
@@ -217,6 +213,12 @@ def login():
 
 @api_auth_bp.route('/logout', methods=['POST'])
 def logout():
+    if request.headers.get("X-Requested-With") != "ReactApp":
+        log(30, "forbidden request received")
+        return jsonify({"success": False,
+                        "location": "/unknown",
+                        "message": "Forbidden access"}), 403
+
     access_cookie = request.cookies.get("access_token_cookie")
 
     if not access_cookie:
@@ -256,6 +258,13 @@ def logout():
 
 @api_auth_bp.route('/verify', methods=['GET'])
 def verify_user():
+    if request.headers.get("X-Requested-With") != "ReactApp":
+        log(30, "forbidden request received")
+
+        return jsonify({"success": False,
+                        "location": "/unknown",
+                        "message": "Forbidden access"}), 403
+
     try:
         # Forward the exact Cookie header the browser originally sent
         cookies = {
@@ -276,7 +285,7 @@ def verify_user():
 
         if not resp.status_code == 200:
             log(40, "auth error", status_code=resp.status_code)
-            return jsonify(resp), resp.status_code
+            return jsonify(result), resp.status_code
 
         return jsonify({"success": True, "user_id": result.get("user_id")}), resp.status_code
 

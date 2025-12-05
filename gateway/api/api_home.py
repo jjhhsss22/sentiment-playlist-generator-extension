@@ -36,7 +36,14 @@ def home():
             timeout=5
         )
 
-        auth_results = auth_response.json()
+        try:
+            auth_results = auth_response.json()
+        except Exception as e:
+            log(40, "auth bad response")
+            return jsonify({
+                "success": False,
+                "message": "Bad response from authentication server. Please try again later."
+            }), 502
 
         if auth_response.status_code != 200:
             return auth_results, auth_response.status_code
@@ -47,7 +54,7 @@ def home():
         log(50, "auth server network error", error=str(e))
         return jsonify({
             "success": False,
-            "message": "authentication server error. Please try again later."
+            "message": "Authentication server error. Please try again later."
         }), 500
 
 # AI ------------------------------------------------------------------------

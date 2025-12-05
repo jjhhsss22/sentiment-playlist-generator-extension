@@ -71,6 +71,11 @@ export default function Home() {
       showMessage(setSuccess, "Playlist generated successfully!");
 
     } catch (err) {
+      if (!err.response) {
+        showMessage(setGeneral, "Network error. Please try again.");  // network error
+        return;
+      }
+
       console.error("Home request error:", err);
       showMessage(setGeneral, err?.response?.data?.message || "Something went wrong.");
     }
