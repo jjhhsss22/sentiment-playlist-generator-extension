@@ -17,10 +17,10 @@ def return_user():
             "message": "Bad response from gateway server. Please try again later."
         }), 502
 
-    origin = data.get("API-Requested-With", "")
+    origin = request.headers.get("API-Requested-With", "")
 
-    if origin != "Home Gateway":
-        log(30, "gateway bad response")
+    if origin != "Auth server":
+        log(30, "forbidden request not from auth")
         return jsonify({"forbidden": True}), 403
 
     email = data.get("email")
@@ -43,7 +43,7 @@ def return_user():
 
     except Exception as e:
         log(40, "database user query error", error=str(e))
-        return jsonify({"success": False, "message": "Internal db server error"}), 500
+        return jsonify({"success": False, "message": "Internal db server error. Please try again later."}), 500
 
 # @app.route('/verification', methods=['GET', 'POST'])
 # def verify_user():
@@ -100,10 +100,10 @@ def new_user():
             "message": "Bad response from gateway server. Please try again later."
         }), 502
 
-    origin = data.get("API-Requested-With", "")
+    origin = request.headers.get("API-Requested-With", "")
 
-    if origin != "Home Gateway":
-        log(30, "gateway bad response")
+    if origin != "Auth server":
+        log(30, "forbidden request not from gateway")
         return jsonify({"forbidden": True}), 403
 
     try:
@@ -131,9 +131,10 @@ def return_playlists():
             "message": "Bad response from gateway server. Please try again later."
         }), 502
 
-    origin = data.get("API-Requested-With", "")
+    origin = request.headers.get("API-Requested-With", "")
 
     if origin != "Home Gateway":
+        log(30, "forbidden request not from gateway")
         return jsonify({"forbidden": True}), 403
 
     user_id = data.get("user_id")
@@ -157,10 +158,10 @@ def new_playlist():
             "message": "Bad response from gateway server. Please try again later."
         }), 502
 
-    origin = data.get("API-Requested-With", "")
+    origin = request.headers.get("API-Requested-With", "")
 
     if origin != "Home Gateway":
-        log(30, "gateway bad response")
+        log(30, "forbidden request not from gateway")
         return jsonify({"forbidden": True}), 403
 
     try:

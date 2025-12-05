@@ -79,6 +79,11 @@ export default function Login() {
       setTimeout(() => navTo("/home"), 1000);
 
     } catch (err) {
+      if (!err.response) {
+        showMessage(setGeneral, "Network error. Please try again.");
+        return;
+      }
+
       console.error("Login request error:", err);
       showMessage(setGeneral, err?.response?.data?.message || "Something went wrong.");
     }

@@ -21,3 +21,10 @@ def is_valid_password(password1, password2):  # validates password by checking a
         return True
     else:
         return False
+
+
+def is_valid_email(email):
+    if "@" not in email or " " in email:  # email needs to have @ and not have space
+        return False
+
+    return True

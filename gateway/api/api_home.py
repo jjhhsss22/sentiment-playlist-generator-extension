@@ -9,7 +9,7 @@ api_home_bp = Blueprint('api_home', __name__)
 AI_API_URL = "http://127.0.0.1:8001"
 MUSIC_API_URL = "http://127.0.0.1:8002/create-playlist"
 DB_API_URL = "http://127.0.0.1:8003/new-playlist"
-AUTH_API_URL = "http://127.0.0.1:8004/jwt/validate"
+AUTH_API_URL = "http://127.0.0.1:8004/jwt/verify"
 
 
 @api_home_bp.route('/home', methods=['GET', 'POST'])
@@ -26,13 +26,26 @@ def home():
 # Auth ------------------------------------------------------------------------
 
     try:
-        cookies = request.cookies
-        auth_response = requests.get(AUTH_API_URL, cookies=cookies)
+        cookies = {
+            "access_token_cookie": request.cookies.get("access_token_cookie")
+        }
 
-        auth_results = auth_response.json()
+        auth_response = requests.get(
+            AUTH_API_URL,
+            cookies=cookies,
+            timeout=5
+        )
+
+        try:
+            auth_results = auth_response.json()
+        except Exception as e:
+            log(40, "auth bad response")
+            return jsonify({
+                "success": False,
+                "message": "Bad response from authentication server. Please try again later."
+            }), 502
 
         if auth_response.status_code != 200:
-            # Auth service already returns correct json
             return auth_results, auth_response.status_code
 
         user_id = auth_results.get("user_id")
@@ -41,7 +54,7 @@ def home():
         log(50, "auth server network error", error=str(e))
         return jsonify({
             "success": False,
-            "message": "authentication server error. Please try again later."
+            "message": "Authentication server error. Please try again later."
         }), 500
 
 # AI ------------------------------------------------------------------------
@@ -51,10 +64,14 @@ def home():
         input_text = data.get("text", "").strip()
         desired_emotion = data.get("emotion", None)
 
-        ai_response = requests.post(f"{AI_API_URL}/predict", json={
-            "API-Requested-With": "Home Gateway",
-            # no need for IP whitelisting or internal secret key
-            # because api servers only accessible from this gateway server
+        ai_response = requests.post(
+            f"{AI_API_URL}/predict",
+            headers={
+                "API-Requested-With": "Home Gateway"
+                # no need for IP whitelisting or internal secret key
+                # because api servers only accessible from this gateway server por other internal servers
+            },
+            json={
             "text": input_text,
             "emotion": desired_emotion,
             "user_id": user_id
@@ -138,8 +155,12 @@ def home():
 # MUSIC ------------------------------------------------------------------------
 
     try:
-        music_response = requests.post(MUSIC_API_URL, json={
-            "API-Requested-With": "Home Gateway",
+        music_response = requests.post(
+            MUSIC_API_URL,
+            headers={
+                "API-Requested-With": "Home Gateway"
+            },
+            json={
             "starting_coord": starting_coord,
             "target_coord": target_coord,
         })
@@ -187,8 +208,10 @@ def home():
     try:
         db_response = requests.post(
             DB_API_URL,
+            headers={
+                "API-Requested-With": "Home Gateway"
+            },
             json={
-                "API-Requested-With": "Home Gateway",
                 "text": input_text,
                 "likely_emotion": likely_emotion,
                 "desired_emotion": desired_emotion,

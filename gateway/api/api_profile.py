@@ -1,15 +1,14 @@
-from flask import jsonify, request, Blueprint, current_app
+from flask import jsonify, request, Blueprint
 import requests
-from flask_jwt_extended import jwt_required, get_jwt_identity
+
 from gateway.log_logic.log_util import log
 
 api_profile_bp = Blueprint('api_profile', __name__)
 
 DB_API_URL = "http://127.0.0.1:8003/playlist"
-AUTH_API_URL = "http://127.0.0.1:8004/jwt/validate"
+AUTH_API_URL = "http://127.0.0.1:8004/jwt/verify"
 
 @api_profile_bp.route('/profile', methods=['GET'])
-@jwt_required()
 def api_profile():
     if request.headers.get("X-Requested-With") != "ReactApp":
         log(30, "forbidden request received")
@@ -18,13 +17,29 @@ def api_profile():
                         "message": "Forbidden access"}), 403
 
     try:
-        cookies = request.cookies
-        auth_response = requests.get(AUTH_API_URL, cookies=cookies)
+        cookies = {
+            "access_token_cookie": request.cookies.get("access_token_cookie")
+        }
 
-        auth_results = auth_response.json()
+        auth_response = requests.get(
+            AUTH_API_URL,
+            cookies=cookies,
+            timeout=5
+        )
+
+        try:
+            auth_results = auth_response.json()
+        except Exception as e:
+            log(40, "auth bad response")
+            return jsonify({
+                "success": False,
+                "message": "Bad response from authentication server. Please try again later."
+            }), 502
 
         if auth_response.status_code != 200:
-            return auth_results, auth_response.status_code
+            return jsonify(auth_results), auth_response.status_code
+
+        # add xrequestedwith??
 
         user_id = auth_results.get("user_id")
 
@@ -32,14 +47,16 @@ def api_profile():
         log(50, "auth server network error", error=str(e))
         return jsonify({
             "success": False,
-            "message": "authentication server error. Please try again later."
+            "message": "Authentication server error. Please try again later."
         }), 500
 
     try:
         response = requests.post(
             DB_API_URL,
+            headers={
+                "API-Requested-With": "Home Gateway"
+            },
             json={
-                "API-Requested-With": "Home Gateway",
                 "user_id": user_id
             })
 

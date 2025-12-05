@@ -8,7 +8,7 @@ export default function ProtectedRoute({ children }) {
   useEffect(() => {
     async function check() {
       try {
-        const { data } = await api.get("/validate"); // GET request to validate JWT
+        const { data } = await api.get("/verify"); // GET request to verify JWT
         if (data?.user_id) {
           setValid(true);
         } else {

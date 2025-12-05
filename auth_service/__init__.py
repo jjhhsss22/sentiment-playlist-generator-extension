@@ -1,7 +1,6 @@
-from flask import Flask, current_app, request, jsonify
+from flask import Flask, jsonify
 from flask_jwt_extended import JWTManager
 from log_logic.auth_logging_config import configure_logging
-
 import logging
 
 def create_auth():
@@ -17,14 +16,16 @@ def create_auth():
     # JWT configuration
     app.config["JWT_SECRET_KEY"] = "super-secret-key"
     app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
-    app.config["JWT_COOKIE_SECURE"] = True
-    app.config["JWT_COOKIE_SAMESITE"] = "None"
     app.config["JWT_COOKIE_HTTPONLY"] = True
+    app.config["JWT_COOKIE_SECURE"] = True   # True
+    app.config["JWT_COOKIE_SAMESITE"] = "None"  # "None" for production
 
     jwt = JWTManager(app)
 
     from api.jwt_oauth import jwt_bp
+    from api.user_auth import user_auth_bp
     app.register_blueprint(jwt_bp, url_prefix="/jwt")
+    app.register_blueprint(user_auth_bp, url_prefix="/user")
 
     @jwt.unauthorized_loader
     def unauthorized_callback(err_msg):

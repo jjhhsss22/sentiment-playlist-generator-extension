@@ -16,13 +16,13 @@ def return_prediction():
             "message": "Bad response from gateway server. Please try again later."
         }), 502
 
-    origin = data.get("API-Requested-With", "")
-    user_id = data.get("user_id")
+    origin = request.headers.get("API-Requested-With", "")
 
     if origin != "Home Gateway":
-        log(30, "forbidden request received", user_id)
+        log(30, "forbidden request not from gateway")
         return jsonify({"forbidden": True}), 403
 
+    user_id = data.get("user_id")
     input_text = data.get("text", "").strip()
     desired_emotion = data.get("emotion", None)
 
