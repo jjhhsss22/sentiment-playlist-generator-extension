@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, g, request
 import pymysql
 import logging
 
@@ -23,5 +23,9 @@ def create_db():
 
     from api_repository_interface import db_bp
     app.register_blueprint(db_bp)
+
+    @app.before_request
+    def read_request_id():
+        g.request_id = request.headers.get("request_id", "unknown")
 
     return app

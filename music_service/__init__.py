@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, g, request
 import logging
 
 from log_logic.ms_logging_config import configure_logging
@@ -14,5 +14,9 @@ def create_ms():
 
     from api_music_service_interface import ms_bp
     app.register_blueprint(ms_bp)
+
+    @app.before_request
+    def read_request_id():
+        g.request_id = request.headers.get("request_id", "unknown")
 
     return app

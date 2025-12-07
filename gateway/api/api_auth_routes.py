@@ -1,4 +1,4 @@
-from flask import request, jsonify, Blueprint
+from flask import request, jsonify, Blueprint, g
 import requests
 
 from gateway.log_logic.log_util import log
@@ -23,11 +23,13 @@ def signup():
         return jsonify({"success": False, "message": "Bad response. Please try again"}), 502
 
     try:
+        headers = {"request_id": g.request_id,
+                   "API-Requested-With": "Home Gateway"
+                   }
+
         validate_response = requests.post(
             f"{AUTH_API_URL}/user/validate",
-            headers={
-                "API-Requested-With": "Home Gateway"
-            },
+            headers=headers,
             json=data
         )
 
@@ -60,12 +62,13 @@ def signup():
         return jsonify({"success": False, "message": "Authentication server error. Please try again later."}), 500
 
     try:
+        headers = {"request_id": g.request_id,
+                   "API-Requested-With": "Home Gateway"
+                   }
 
         assign_response = requests.post(
             f"{AUTH_API_URL}/jwt/assign",
-            headers={
-                "API-Requested-With": "Home Gateway"
-            },
+            headers=headers,
             json={
                 "user_id": user_id,
                 "username": username
@@ -128,11 +131,13 @@ def login():
         return jsonify({"success": False, "message": "Bad response. Please try again"}), 502
 
     try:
+        headers = {"request_id": g.request_id,
+                   "API-Requested-With": "Home Gateway"
+                   }
+
         verify_response = requests.post(
             f"{AUTH_API_URL}/user/verify",
-            headers={
-                "API-Requested-With": "Home Gateway"
-            },
+            headers=headers,
             json=data
         )
 
@@ -161,12 +166,13 @@ def login():
         return jsonify({"success": False, "message": "Authentication network error. Please try again later."}), 500
 
     try:
+        headers = {"request_id": g.request_id,
+                   "API-Requested-With": "Home Gateway"
+                   }
 
         auth_response = requests.post(
             f"{AUTH_API_URL}/jwt/assign",
-            headers={
-                "API-Requested-With": "Home Gateway"
-            },
+            headers=headers,
             json={
                 "user_id": user_id,
                 "username": username
@@ -228,12 +234,17 @@ def logout():
         }), 400
 
     try:
+        headers = {"request_id": g.request_id,
+                   "API-Requested-With": "Home Gateway"
+                   }
+
         cookies = {
             "access_token_cookie": access_cookie
         }
 
         resp = requests.post(
             f"{AUTH_API_URL}/jwt/remove",
+            headers=headers,
             cookies=cookies,
             timeout=5
         )
@@ -266,6 +277,10 @@ def verify_user():
                         "message": "Forbidden access"}), 403
 
     try:
+        headers = {"request_id": g.request_id,
+                   "API-Requested-With": "Home Gateway"
+                   }
+
         # Forward the exact Cookie header the browser originally sent
         cookies = {
             "access_token_cookie": request.cookies.get("access_token_cookie")
@@ -273,6 +288,7 @@ def verify_user():
 
         resp = requests.get(
             f"{AUTH_API_URL}/jwt/verify",
+            headers=headers,
             cookies=cookies,
             timeout=5
         )

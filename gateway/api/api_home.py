@@ -1,4 +1,4 @@
-from flask import request, jsonify, Blueprint
+from flask import request, jsonify, Blueprint, g
 import requests
 import time
 
@@ -26,12 +26,14 @@ def home():
 # Auth ------------------------------------------------------------------------
 
     try:
+        headers = {"request_id": g.request_id}
         cookies = {
             "access_token_cookie": request.cookies.get("access_token_cookie")
         }
 
         auth_response = requests.get(
             AUTH_API_URL,
+            headers=headers,
             cookies=cookies,
             timeout=5
         )
@@ -64,13 +66,15 @@ def home():
         input_text = data.get("text", "").strip()
         desired_emotion = data.get("emotion", None)
 
+        headers = {"request_id": g.request_id,
+                   "API-Requested-With": "Home Gateway"
+                   }
+        # no need for IP whitelisting or internal secret key
+        # because api servers only accessible from this gateway server por other internal servers
+
         ai_response = requests.post(
             f"{AI_API_URL}/predict",
-            headers={
-                "API-Requested-With": "Home Gateway"
-                # no need for IP whitelisting or internal secret key
-                # because api servers only accessible from this gateway server por other internal servers
-            },
+            headers=headers,
             json={
             "text": input_text,
             "emotion": desired_emotion,
@@ -155,11 +159,13 @@ def home():
 # MUSIC ------------------------------------------------------------------------
 
     try:
+        headers = {"request_id": g.request_id,
+                   "API-Requested-With": "Home Gateway"
+                   }
+
         music_response = requests.post(
             MUSIC_API_URL,
-            headers={
-                "API-Requested-With": "Home Gateway"
-            },
+            headers=headers,
             json={
             "starting_coord": starting_coord,
             "target_coord": target_coord,
@@ -206,11 +212,13 @@ def home():
 # DB ------------------------------------------------------------------------
 
     try:
+        headers = {"request_id": g.request_id,
+                   "API-Requested-With": "Home Gateway"
+                   }
+
         db_response = requests.post(
             DB_API_URL,
-            headers={
-                "API-Requested-With": "Home Gateway"
-            },
+            headers=headers,
             json={
                 "text": input_text,
                 "likely_emotion": likely_emotion,

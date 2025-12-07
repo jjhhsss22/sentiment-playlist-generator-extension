@@ -1,4 +1,5 @@
-from flask import Flask, request
+from flask import Flask, g, request
+import uuid
 from log_logic.gw_logging_config import configure_logging
 import logging
 
@@ -24,6 +25,17 @@ def create_app():
     def catch_direct_api_hits():
         if request.path.startswith("/api") and "text/html" in request.headers.get("Accept", ""):
             return app.send_static_file("index.html")
+
+    @app.before_request
+    def assign_request_id():
+        # 1. If client sent one, reuse it
+        incoming = request.headers.get("request_id")
+        g.request_id = incoming or str(uuid.uuid4())
+
+    @app.after_request
+    def add_request_id_header(response):
+        response.headers["request_id"] = g.request_id
+        return response
 
     return app
 

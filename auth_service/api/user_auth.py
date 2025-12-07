@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, g
 import requests
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -48,11 +48,13 @@ def validate():
         }), 401
 
     try:
+        headers = {"request_id": g.request_id,
+                   "API-Requested-With": "Auth server"
+                   }
+
         query_response = requests.post(
             f"{DB_API_URL}/v1/query",
-            headers={
-                "API-Requested-With": "Auth server"
-            },
+            headers=headers,
             json={
                 "email": email
             })
@@ -82,13 +84,15 @@ def validate():
         return jsonify({"success": False, "message": "Database server error. Please try again later."}), 500
 
     try:
+        headers = {"request_id": g.request_id,
+                   "API-Requested-With": "Auth server"
+                   }
+
         hashed_password = generate_password_hash(password)
 
         create_response = requests.post(
             f"{DB_API_URL}/new-user",
-            headers={
-                "API-Requested-With": "Auth server"
-            },
+            headers=headers,
             json={
                 "email": email,
                 "username": username,
@@ -138,11 +142,13 @@ def verify():
     password = data.get("password")
 
     try:
+        headers = {"request_id": g.request_id,
+                   "API-Requested-With": "Auth server"
+                   }
+
         db_response = requests.post(
             f"{DB_API_URL}/v1/query",
-            headers={
-                "API-Requested-With": "Auth server"
-            },
+            headers=headers,
             json={
                 "email": email
             })

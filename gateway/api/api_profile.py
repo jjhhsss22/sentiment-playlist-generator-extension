@@ -1,4 +1,4 @@
-from flask import jsonify, request, Blueprint
+from flask import jsonify, request, Blueprint, g
 import requests
 
 from gateway.log_logic.log_util import log
@@ -17,12 +17,15 @@ def api_profile():
                         "message": "Forbidden access"}), 403
 
     try:
+        headers = {"request_id": g.request_id}
+
         cookies = {
             "access_token_cookie": request.cookies.get("access_token_cookie")
         }
 
         auth_response = requests.get(
             AUTH_API_URL,
+            headers=headers,
             cookies=cookies,
             timeout=5
         )
@@ -39,8 +42,6 @@ def api_profile():
         if auth_response.status_code != 200:
             return jsonify(auth_results), auth_response.status_code
 
-        # add xrequestedwith??
-
         user_id = auth_results.get("user_id")
 
     except Exception as e:
@@ -51,11 +52,13 @@ def api_profile():
         }), 500
 
     try:
+        headers = {"request_id": g.request_id,
+                   "API-Requested-With": "Home Gateway"
+                   }
+
         response = requests.post(
             DB_API_URL,
-            headers={
-                "API-Requested-With": "Home Gateway"
-            },
+            headers=headers,
             json={
                 "user_id": user_id
             })

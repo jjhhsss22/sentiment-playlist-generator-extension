@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, g, request
 from flask_jwt_extended import JWTManager
 from log_logic.auth_logging_config import configure_logging
 import logging
@@ -70,5 +70,9 @@ def create_auth():
             "location": "/login",
             "message": "Expired session. Please log in again"
         }), 401
+
+    @app.before_request
+    def read_request_id():
+        g.request_id = request.headers.get("request_id", "unknown")
 
     return app
