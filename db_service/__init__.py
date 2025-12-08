@@ -25,7 +25,9 @@ def create_db():
     app.register_blueprint(db_bp)
 
     @app.before_request
-    def read_request_id():
-        g.request_id = request.headers.get("request_id", "unknown")
+    def read_request_and_user_id():
+        g.request_id = request.headers.get("request-id", "unknown")
+        user_id = request.headers.get("user-id")
+        g.user_id = int(user_id) if user_id is not None else None
 
     return app

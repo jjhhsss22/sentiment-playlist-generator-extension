@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, g
 from flask_jwt_extended import (
     jwt_required,
     get_jwt_identity,
@@ -24,10 +24,9 @@ def verify_jwt():
 def assign_jwt():
     data = request.get_json()
 
-    user_id = data.get("user_id")
     username = data.get("username", "")
 
-    if not user_id or not username:
+    if not g.user_id or not username:
         return jsonify({
             "success": False,
             "message": "Missing user id or username"
@@ -35,13 +34,13 @@ def assign_jwt():
 
     try:
         access_token = create_access_token(
-            identity=str(user_id),
+            identity=str(g.user_id),
             expires_delta=timedelta(hours=6)
         )
 
         resp = jsonify({
             "success": True,
-            "message": f"Token assigned for {username} with id {user_id}",
+            "message": f"Token assigned for {username} with id {str(g.user_id)}",
         })
         resp.status_code = 200
 

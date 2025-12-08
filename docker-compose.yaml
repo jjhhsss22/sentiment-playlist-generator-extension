@@ -38,3 +38,12 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+
+#logging:
+#  driver: "json-file"
+#  options:
+#    max-size: "10m"
+#    max-file: "3"
+# NEED THIS OR DOCKER CONTAINER WILL FOREVER STORE LOGS
+# BUT IF Logs go to CloudWatch IN AWS, it has a default retention of never expires
+# unless configure retention (7 days, 30 days, 1 year, etc.)

@@ -29,13 +29,14 @@ def create_app():
     @app.before_request
     def assign_request_id():
         # 1. If client sent one, reuse it
-        incoming = request.headers.get("request_id")
+        incoming = request.headers.get("request-id")
         g.request_id = incoming or str(uuid.uuid4())
 
-    @app.after_request
-    def add_request_id_header(response):
-        response.headers["request_id"] = g.request_id
-        return response
+    # @app.after_request
+    # def add_request_and_user_id_header(response):
+    #     response.headers["request_id"] = g.request_id
+    #     response.headers["user_id"] = g.user_id
+    #     return response
 
     return app
 

@@ -26,7 +26,10 @@ def home():
 # Auth ------------------------------------------------------------------------
 
     try:
-        headers = {"request_id": g.request_id}
+        headers = {"request-id": g.request_id,
+                   "API-Requested-With": "Home Gateway"
+                   }
+
         cookies = {
             "access_token_cookie": request.cookies.get("access_token_cookie")
         }
@@ -51,6 +54,7 @@ def home():
             return auth_results, auth_response.status_code
 
         user_id = auth_results.get("user_id")
+        g.user_id = user_id
 
     except Exception as e:
         log(50, "auth server network error", error=str(e))
@@ -66,7 +70,8 @@ def home():
         input_text = data.get("text", "").strip()
         desired_emotion = data.get("emotion", None)
 
-        headers = {"request_id": g.request_id,
+        headers = {"request-id": g.request_id,
+                   "user-id": str(g.user_id),
                    "API-Requested-With": "Home Gateway"
                    }
         # no need for IP whitelisting or internal secret key
@@ -78,7 +83,6 @@ def home():
             json={
             "text": input_text,
             "emotion": desired_emotion,
-            "user_id": user_id
         })
 
         try:
@@ -111,8 +115,7 @@ def home():
             '''
 
             time.sleep(0.5)
-            status_resp = requests.get(f"{AI_API_URL}/task/{task_id}", json={
-                "user_id": user_id})
+            status_resp = requests.get(f"{AI_API_URL}/task/{task_id}")
 
             try:
                 status_data = status_resp.json()
@@ -159,7 +162,8 @@ def home():
 # MUSIC ------------------------------------------------------------------------
 
     try:
-        headers = {"request_id": g.request_id,
+        headers = {"request-id": g.request_id,
+                   "user-id": str(g.user_id),
                    "API-Requested-With": "Home Gateway"
                    }
 
@@ -213,6 +217,7 @@ def home():
 
     try:
         headers = {"request_id": g.request_id,
+                   "user_id": str(g.user_id),
                    "API-Requested-With": "Home Gateway"
                    }
 
@@ -224,7 +229,6 @@ def home():
                 "likely_emotion": likely_emotion,
                 "desired_emotion": desired_emotion,
                 "playlist_text": playlist_text,
-                "user_id": user_id
             })
 
         try:

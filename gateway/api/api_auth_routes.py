@@ -23,7 +23,7 @@ def signup():
         return jsonify({"success": False, "message": "Bad response. Please try again"}), 502
 
     try:
-        headers = {"request_id": g.request_id,
+        headers = {"request-id": g.request_id,
                    "API-Requested-With": "Home Gateway"
                    }
 
@@ -56,13 +56,15 @@ def signup():
         confirm_password = data.get('confirmPassword')
 
         user_id =validate_result.get("user_id")
+        g.user_id = user_id
 
     except Exception as e:
         log(50, "db network error", error=str(e))
         return jsonify({"success": False, "message": "Authentication server error. Please try again later."}), 500
 
     try:
-        headers = {"request_id": g.request_id,
+        headers = {"request-id": g.request_id,
+                   "user-id": str(g.user_id),
                    "API-Requested-With": "Home Gateway"
                    }
 
@@ -70,7 +72,6 @@ def signup():
             f"{AUTH_API_URL}/jwt/assign",
             headers=headers,
             json={
-                "user_id": user_id,
                 "username": username
             }
         )
@@ -131,7 +132,7 @@ def login():
         return jsonify({"success": False, "message": "Bad response. Please try again"}), 502
 
     try:
-        headers = {"request_id": g.request_id,
+        headers = {"request-id": g.request_id,
                    "API-Requested-With": "Home Gateway"
                    }
 
@@ -143,8 +144,8 @@ def login():
 
         try:
             verify_result = verify_response.json()
-        except Exception:
-            log(40, "auth bad response")
+        except Exception as e:
+            log(40, "auth bad response", error=e)
             return jsonify({"success": False, "message": "Authentication server error"}), 502
 
         if not verify_response.ok:
@@ -159,6 +160,7 @@ def login():
             return jsonify({"success": False, "message": verify_message}), verify_response.status_code
 
         user_id = verify_result.get("user_id")
+        g.user_id = user_id
         username = verify_result.get("username")
 
     except Exception as e:
@@ -166,7 +168,8 @@ def login():
         return jsonify({"success": False, "message": "Authentication network error. Please try again later."}), 500
 
     try:
-        headers = {"request_id": g.request_id,
+        headers = {"request-id": g.request_id,
+                   "user-id": str(g.user_id),
                    "API-Requested-With": "Home Gateway"
                    }
 
@@ -174,7 +177,6 @@ def login():
             f"{AUTH_API_URL}/jwt/assign",
             headers=headers,
             json={
-                "user_id": user_id,
                 "username": username
             }
         )
@@ -225,21 +227,21 @@ def logout():
                         "location": "/unknown",
                         "message": "Forbidden access"}), 403
 
-    access_cookie = request.cookies.get("access_token_cookie")
+    access_token = request.cookies.get("access_token_cookie")
 
-    if not access_cookie:
+    if not access_token:
         return jsonify({
             "success": False,
             "message": "No active session found"
         }), 400
 
     try:
-        headers = {"request_id": g.request_id,
+        headers = {"request-id": g.request_id,
                    "API-Requested-With": "Home Gateway"
                    }
 
         cookies = {
-            "access_token_cookie": access_cookie
+            "access_token_cookie": access_token
         }
 
         resp = requests.post(
@@ -251,8 +253,6 @@ def logout():
 
         forward_resp = jsonify(resp.json())
         forward_resp.status_code = resp.status_code
-
-        log(50, "fsf", status_code=forward_resp.status_code)
 
         if "Set-Cookie" in resp.headers:
             forward_resp.headers.add("Set-Cookie", resp.headers["Set-Cookie"])
@@ -277,7 +277,7 @@ def verify_user():
                         "message": "Forbidden access"}), 403
 
     try:
-        headers = {"request_id": g.request_id,
+        headers = {"request-id": g.request_id,
                    "API-Requested-With": "Home Gateway"
                    }
 

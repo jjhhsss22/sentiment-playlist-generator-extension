@@ -17,7 +17,9 @@ def api_profile():
                         "message": "Forbidden access"}), 403
 
     try:
-        headers = {"request_id": g.request_id}
+        headers = {"request-id": g.request_id,
+                   "API-Requested-With": "Home Gateway"
+                   }
 
         cookies = {
             "access_token_cookie": request.cookies.get("access_token_cookie")
@@ -33,7 +35,7 @@ def api_profile():
         try:
             auth_results = auth_response.json()
         except Exception as e:
-            log(40, "auth bad response")
+            log(40, "auth bad response", error=e)
             return jsonify({
                 "success": False,
                 "message": "Bad response from authentication server. Please try again later."
@@ -43,6 +45,7 @@ def api_profile():
             return jsonify(auth_results), auth_response.status_code
 
         user_id = auth_results.get("user_id")
+        g.user_id = user_id
 
     except Exception as e:
         log(50, "auth server network error", error=str(e))
@@ -52,16 +55,15 @@ def api_profile():
         }), 500
 
     try:
-        headers = {"request_id": g.request_id,
+        headers = {"request-id": g.request_id,
+                   "user-id": str(g.user_id),
                    "API-Requested-With": "Home Gateway"
                    }
 
         response = requests.post(
             DB_API_URL,
-            headers=headers,
-            json={
-                "user_id": user_id
-            })
+            headers=headers
+        )
 
         try:
             results = response.json()

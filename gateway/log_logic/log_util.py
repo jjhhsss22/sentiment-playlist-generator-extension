@@ -1,4 +1,4 @@
-from flask import request, current_app
+from flask import request, current_app, g
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 
 def log(level, event, **extra_kwargs):
@@ -6,22 +6,13 @@ def log(level, event, **extra_kwargs):
     Standardised JSON production logs.
     """
 
-    user_id = None  # for endpoints where jwt does not exist (e.g. auth routes)
-    try:
-        verify_jwt_in_request(optional=True)
-        user_id = get_jwt_identity()
-        if user_id is not None:
-            user_id = int(user_id)
-    except Exception:
-        pass
-
     current_app.logger.log(
         level,  # level - INFO 20, WARNING 30, ERROR 40, CRITICAL 50
         {
             "event": event,
             "path": request.path,
             "method": request.method,
-            "user_id": user_id,
+            "user_id": getattr(g, "user_id", None),
             "ip": request.remote_addr,
             **extra_kwargs
         }

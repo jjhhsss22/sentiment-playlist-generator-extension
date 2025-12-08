@@ -1,8 +1,7 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 
 from db_service.db_structure.db_module import get_user_info, get_playlists, create_user, create_playlist, save
 from log_logic.log_util import log
-from __init__ import create_db
 
 db_bp = Blueprint('db', __name__)
 
@@ -122,14 +121,6 @@ def new_user():
 
 @db_bp.route('/playlist', methods=['POST'])
 def return_playlists():
-    try:
-        data = request.get_json()
-    except Exception:
-        log(30, "gateway bad response")
-        return jsonify({
-            "success": False,
-            "message": "Bad response from gateway server. Please try again later."
-        }), 502
 
     origin = request.headers.get("API-Requested-With", "")
 
@@ -137,14 +128,12 @@ def return_playlists():
         log(30, "forbidden request not from gateway")
         return jsonify({"forbidden": True}), 403
 
-    user_id = data.get("user_id")
-
     try:
-        playlists_data = get_playlists(user_id)
+        playlists_data = get_playlists(g.user_id)
         return jsonify({"success": True, "playlists": playlists_data}), 200
     except Exception as e:
         log(40, "database playlist query error", error=str(e))
-        return jsonify({"success": False, "message": "Playlist database error" }), 500
+        return jsonify({"success": False, "message": "Playlist database error"}), 500
 
 
 @db_bp.route('/new-playlist', methods=['POST'])
@@ -169,9 +158,8 @@ def new_playlist():
         likely_emotion = data.get("likely_emotion")
         desired_emotion = data.get("desired_emotion")
         playlist_text = data.get("playlist_text")
-        user_id = data.get("user_id")
 
-        new_playlist = create_playlist(input_text, likely_emotion, desired_emotion, playlist_text, user_id)
+        new_playlist = create_playlist(input_text, likely_emotion, desired_emotion, playlist_text, g.user_id)
         save(new_playlist)
 
         return jsonify({"success": True, "message": "Playlist created successfully"}), 201

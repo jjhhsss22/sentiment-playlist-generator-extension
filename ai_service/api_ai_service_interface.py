@@ -22,7 +22,6 @@ def return_prediction():
         log(30, "forbidden request not from gateway")
         return jsonify({"forbidden": True}), 403
 
-    user_id = data.get("user_id")
     input_text = data.get("text", "").strip()
     desired_emotion = data.get("emotion", None)
 
@@ -30,7 +29,7 @@ def return_prediction():
         task = run_prediction_task.delay(input_text, desired_emotion)
         return jsonify({"success": True, "task_id": task.id}), 200
     except Exception as e:
-        log(50, "failed to start celery task", user_id=user_id, error=str(e))
+        log(50, "failed to start celery task", error=str(e))
         return jsonify({
             "success": False,
             "message": "Failed to start AI prediction."
@@ -41,7 +40,6 @@ def return_prediction():
 @ai_bp.route("/task/<task_id>", methods=["GET"])
 def get_task_status(task_id):
     data = request.get_json()
-    user_id = data.get("user_id")
 
     task = run_prediction_task.AsyncResult(task_id)
 
@@ -52,7 +50,7 @@ def get_task_status(task_id):
     # elif task.state == "FAILURE":
     #     return jsonify({"status": "error", "message": str(task.info)})
     else:
-        log(40, "celery task failed", user_id=user_id, task_id=task.id, task_state=task.state)
+        log(40, "celery task failed", task_id=task.id, task_state=task.state)
         return jsonify({"status": task.state}), 500
 
 

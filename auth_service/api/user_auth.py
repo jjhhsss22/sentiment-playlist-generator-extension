@@ -48,7 +48,7 @@ def validate():
         }), 401
 
     try:
-        headers = {"request_id": g.request_id,
+        headers = {"request-id": g.request_id,
                    "API-Requested-With": "Auth server"
                    }
 
@@ -84,7 +84,7 @@ def validate():
         return jsonify({"success": False, "message": "Database server error. Please try again later."}), 500
 
     try:
-        headers = {"request_id": g.request_id,
+        headers = {"request-id": g.request_id,
                    "API-Requested-With": "Auth server"
                    }
 
@@ -142,7 +142,7 @@ def verify():
     password = data.get("password")
 
     try:
-        headers = {"request_id": g.request_id,
+        headers = {"request-id": g.request_id,
                    "API-Requested-With": "Auth server"
                    }
 
