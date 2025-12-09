@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import api from "../utils/axios.jsx";
+import { navTo } from "../utils/navigate.jsx";
 import { showMessage } from "../utils/showMessage.jsx";
-import { handleLogout } from "../utils/auth";
+import { handleLogout } from "../utils/auth.jsx";
 
 export default function Home() {
 
@@ -108,9 +109,27 @@ export default function Home() {
         </div>
         <div className="flex-none space-x-4">
           <a href="/profile" className="hover:text-primary font-medium">Profile</a>
-          <a href="#" className="hover:text-primary font-medium"
-          onClick={(e) => { e.preventDefault(); handleLogout(); }}
-          >Logout</a>
+          <a
+            href="#"
+            className="hover:text-primary font-medium"
+            onClick={(e) => {
+              e.preventDefault();
+
+              handleLogout(
+                () => {
+                  // This is onSuccess
+                  showMessage("success", "You have been successfully logged out.", true);
+                  navTo("/login");
+                },
+                (msg) => {
+                  // This is onError
+                  showMessage(setGeneral, msg);
+                }
+              );
+            }}
+          >
+            Logout
+          </a>
         </div>
       </nav>
 

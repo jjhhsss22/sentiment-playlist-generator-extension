@@ -112,9 +112,27 @@ export default function Signup() {
         </div>
         <div className="flex-none space-x-4">
           <a href="/profile" className="hover:text-primary font-medium">Profile</a>
-          <a href="#" className="hover:text-primary font-medium"
-          onClick={(e) => { e.preventDefault(); handleLogout(); }}
-          >Logout</a>
+          <a
+            href="#"
+            className="hover:text-primary font-medium"
+            onClick={(e) => {
+              e.preventDefault();
+
+              handleLogout(
+                () => {
+                  // This is onSuccess
+                  showMessage("success", "You have been successfully logged out.", true);
+                  navTo("/login");
+                },
+                (msg) => {
+                  // This is onError
+                  showMessage(setGeneral, msg);
+                }
+              );
+            }}
+          >
+            Logout
+          </a>
         </div>
       </nav>
 
