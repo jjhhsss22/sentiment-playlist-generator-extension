@@ -9,8 +9,8 @@ db_bp = Blueprint('db', __name__)
 def return_user():
     try:
         data = request.get_json()
-    except Exception:
-        log(30, "gateway bad response")
+    except Exception as e:
+        log(40, "gateway bad response", error=e)
         return jsonify({
             "success": False,
             "message": "Bad response from gateway server. Please try again later."
@@ -19,7 +19,7 @@ def return_user():
     origin = request.headers.get("API-Requested-With", "")
 
     if origin != "Auth server":
-        log(30, "forbidden request not from auth")
+        log(40, "forbidden request not from auth")
         return jsonify({"forbidden": True}), 403
 
     email = data.get("email")
@@ -41,7 +41,7 @@ def return_user():
         }), 200
 
     except Exception as e:
-        log(40, "database user query error", error=str(e))
+        log(40, "database user query or network error", error=e)
         return jsonify({"success": False, "message": "Internal db server error. Please try again later."}), 500
 
 # @app.route('/verification', methods=['GET', 'POST'])
@@ -92,8 +92,8 @@ def return_user():
 def new_user():
     try:
         data = request.get_json()
-    except Exception:
-        log(30, "gateway bad response")
+    except Exception as e:
+        log(40, "gateway bad response", error=e)
         return jsonify({
             "success": False,
             "message": "Bad response from gateway server. Please try again later."
@@ -102,7 +102,7 @@ def new_user():
     origin = request.headers.get("API-Requested-With", "")
 
     if origin != "Auth server":
-        log(30, "forbidden request not from gateway")
+        log(40, "forbidden request not from gateway")
         return jsonify({"forbidden": True}), 403
 
     try:
@@ -115,7 +115,7 @@ def new_user():
 
         return jsonify({"success": True, "message": "User created successfully", "user_id": new_user.id}), 201
     except Exception as e:
-        log(40, "database user creation error", error=str(e))
+        log(40, "database user creation error", error=e)
         return jsonify({"success": False, "message": "Failed to create user"}), 500
 
 
@@ -125,14 +125,14 @@ def return_playlists():
     origin = request.headers.get("API-Requested-With", "")
 
     if origin != "Home Gateway":
-        log(30, "forbidden request not from gateway")
+        log(40, "forbidden request not from gateway")
         return jsonify({"forbidden": True}), 403
 
     try:
         playlists_data = get_playlists(g.user_id)
         return jsonify({"success": True, "playlists": playlists_data}), 200
     except Exception as e:
-        log(40, "database playlist query error", error=str(e))
+        log(40, "database playlist query error", error=e)
         return jsonify({"success": False, "message": "Playlist database error"}), 500
 
 
@@ -140,8 +140,8 @@ def return_playlists():
 def new_playlist():
     try:
         data = request.get_json()
-    except Exception:
-        log(30, "gateway bad response")
+    except Exception as e:
+        log(40, "gateway bad response")
         return jsonify({
             "success": False,
             "message": "Bad response from gateway server. Please try again later."
@@ -150,7 +150,7 @@ def new_playlist():
     origin = request.headers.get("API-Requested-With", "")
 
     if origin != "Home Gateway":
-        log(30, "forbidden request not from gateway")
+        log(40, "forbidden request not from gateway")
         return jsonify({"forbidden": True}), 403
 
     try:

@@ -44,7 +44,7 @@ def home():
         try:
             auth_results = auth_response.json()
         except Exception as e:
-            log(40, "auth bad response")
+            log(40, "auth bad response", error=e)
             return jsonify({
                 "success": False,
                 "message": "Bad response from authentication server. Please try again later."
@@ -57,7 +57,7 @@ def home():
         g.user_id = user_id
 
     except Exception as e:
-        log(50, "auth server network error", error=str(e))
+        log(50, "auth server network error", error=e)
         return jsonify({
             "success": False,
             "message": "Authentication server error. Please try again later."
@@ -87,8 +87,8 @@ def home():
 
         try:
             ai_results = ai_response.json()
-        except Exception:
-            log(40, "AI bad response")
+        except Exception as e:
+            log(40, "AI bad response", error=e)
             return jsonify({
                 "success": False,
                 "message": "Bad response from AI server. Please try again later."
@@ -96,7 +96,7 @@ def home():
 
         if not ai_response.ok:
             if ai_results.get("forbidden", False):
-                log(30, "AI forbidden")
+                log(40, "AI forbidden")
                 return jsonify({"success": False,
                                 "location": "/unknown",
                                 "message": "Forbidden access"}), 403
@@ -119,8 +119,8 @@ def home():
 
             try:
                 status_data = status_resp.json()
-            except Exception:
-                log(40, "AI celery task bad response")
+            except Exception as e:
+                log(40, "AI celery task bad response", error=e)
                 continue
 
             if status_data.get("status") == "done":
@@ -153,7 +153,7 @@ def home():
             }), 408
 
     except Exception as e:  # handle network errors
-        log(50, "AI celery task network error", error=str(e))
+        log(50, "AI celery task network error", error=e)
         return jsonify({
             "success": False,
             "message": "AI server error. Please try again later."
@@ -177,8 +177,8 @@ def home():
 
         try:
             music_results = music_response.json()
-        except Exception:
-            log(40, "music bad response")
+        except Exception as e:
+            log(40, "music bad response", error=e)
             return jsonify({
                 "success": False,
                 "message": "Bad response from music server. Please try again later."
@@ -186,7 +186,7 @@ def home():
 
         if not music_response.ok:
             if music_results.get("forbidden", False):
-                log(30, "music forbidden")
+                log(40, "music forbidden")
                 return jsonify({"success": False,
                                 "location": "/unknown",
                                 "message": "Forbidden access"}), 403
@@ -207,7 +207,7 @@ def home():
             }), 200
 
     except Exception as e:  # handle network errors
-        log(50, "music network error", error=str(e))
+        log(50, "music network error", error=e)
         return jsonify({
             "success": False,
             "message": "Music server error. Please try again later."
@@ -233,8 +233,8 @@ def home():
 
         try:
             db_results = db_response.json()
-        except Exception:
-            log(40, "db bad response")
+        except Exception as e:
+            log(40, "db bad response", error=e)
             return jsonify({
                 "success": False,
                 "message": "Bad response from database server. Please try again later."
@@ -242,7 +242,7 @@ def home():
 
         if not db_response.ok:
             if db_results.get("forbidden", False):
-                log(30, "db forbidden")
+                log(40, "db forbidden")
                 return jsonify({"success": False,
                                 "location": "/unknown",
                                 "message": "Forbidden access"}), 403
@@ -265,7 +265,7 @@ def home():
         }), 200
 
     except Exception as e:  # handle network errors
-        log(50, "db network error", error=str(e))
+        log(50, "db network error", error=e)
         return jsonify({
             "success": False,
             "message": "Database server error. Please try again later."

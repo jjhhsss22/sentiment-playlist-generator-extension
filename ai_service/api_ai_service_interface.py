@@ -9,8 +9,8 @@ ai_bp = Blueprint('ai', __name__)
 def return_prediction():
     try:
         data = request.get_json()
-    except Exception:
-        log(30, "gateway bad response")
+    except Exception as e:
+        log(40, "gateway bad response", error=e)
         return jsonify({
             "success": False,
             "message": "Bad response from gateway server. Please try again later."
@@ -19,7 +19,7 @@ def return_prediction():
     origin = request.headers.get("API-Requested-With", "")
 
     if origin != "Home Gateway":
-        log(30, "forbidden request not from gateway")
+        log(40, "forbidden request not from gateway")
         return jsonify({"forbidden": True}), 403
 
     input_text = data.get("text", "").strip()
@@ -29,7 +29,7 @@ def return_prediction():
         task = run_prediction_task.delay(input_text, desired_emotion)
         return jsonify({"success": True, "task_id": task.id}), 200
     except Exception as e:
-        log(50, "failed to start celery task", error=str(e))
+        log(40, "failed to start celery task", error=e)
         return jsonify({
             "success": False,
             "message": "Failed to start AI prediction."
@@ -39,8 +39,6 @@ def return_prediction():
 # celery prediction task status
 @ai_bp.route("/task/<task_id>", methods=["GET"])
 def get_task_status(task_id):
-    data = request.get_json()
-
     task = run_prediction_task.AsyncResult(task_id)
 
     if task.state == "PENDING":

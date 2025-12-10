@@ -14,14 +14,14 @@ DB_API_URL = "http://127.0.0.1:8003"
 def validate():
     try:
         data = request.get_json()
-    except Exception:
-        log(40, "gateway bad response")
+    except Exception as e:
+        log(40, "gateway bad response", error=e)
         return jsonify({"success": False, "message": "Bad response from gateway server. Please try again later."}), 502
 
     origin = request.headers.get("API-Requested-With", "")
 
     if origin != "Home Gateway":
-        log(30, "forbidden request not from gateway")
+        log(50, "forbidden request not from gateway")
         return jsonify({"forbidden": True}), 403
 
     email = data.get("email")
@@ -61,16 +61,14 @@ def validate():
 
         try:
             query_result = query_response.json()
-        except Exception:
-            log(40, "db bad response")
+        except Exception as e:
+            log(40, "db bad response", error=e)
             return jsonify({"success": False, "message": "Bad response from database server. Please try again later."}), 502
 
         if not query_response.ok:
             if query_result.get("forbidden", False):
-                log(30, "db forbidden")
-                return jsonify({"success": False,
-                                "location": "/unknown",
-                                "message": "Forbidden access"}), 403
+                log(40, "db forbidden")
+                return jsonify({"forbidden": True}), 403
 
             query_message = query_result.get("message", "Failed to access database")
             log(40, "db error", status_code=query_response.status_code)
@@ -80,7 +78,7 @@ def validate():
             return jsonify({"success": False, "message": "Email already registered"}), 409
 
     except Exception as e:
-        log(50, "db network error", error=str(e))
+        log(50, "db network error", error=e)
         return jsonify({"success": False, "message": "Database server error. Please try again later."}), 500
 
     try:
@@ -107,10 +105,8 @@ def validate():
 
         if not create_response.ok:
             if create_result.get("forbidden", False):
-                log(30, "db forbidden")
-                return jsonify({"success": False,
-                                "location": "/unknown",
-                                "message": "Forbidden access"}), 403
+                log(40, "db forbidden")
+                return jsonify({"forbidden": True}), 403
 
             create_message = create_result.get("message", "Failed to create new user")
             log(40, "db error", status_code=create_response.status_code)
@@ -127,14 +123,14 @@ def validate():
 def verify():
     try:
         data = request.get_json()
-    except Exception:
-        log(40, "gateway bad response")
+    except Exception as e:
+        log(40, "gateway bad response", error=e)
         return jsonify({"success": False, "message": "Bad response from gateway server. Please try again later."}), 502
 
     origin = request.headers.get("API-Requested-With", "")
 
     if origin != "Home Gateway":
-        log(30, "forbidden request not from gateway")
+        log(50, "forbidden request not from gateway")
         return jsonify({"forbidden": True}), 403
 
     email = data.get("email")
@@ -156,23 +152,21 @@ def verify():
         try:
             db_result = db_response.json()
         except Exception as e:
-            log(40, "db service bad response", error=str(e))
-            return jsonify({"success": False, "message": "Database server error"}), 502
+            log(40, "db service bad response", error=e)
+            return jsonify({"success": False, "message": "Bad response from database server. Please try again later."}), 502
 
         if not db_response.ok:
             if db_result.get("forbidden"):
-                return jsonify({
-                    "success": False,
-                    "message": "Forbidden access"
-                }), 403
+                log(40, "db forbidden")
+                return jsonify({"forbidden": True}), 403
 
             db_message = db_result.get("message", "Failed to access authentication server")
             log(40, "auth error", status_code=db_response.status_code)
             return jsonify({"success": False, "message": db_message}), db_response.status_code
 
     except Exception as e:
-        log(40, "db network error", error=str(e))
-        return jsonify({"success": False, "message": "Database network error. Please try again later."}), 502
+        log(50, "db network error", error=e)
+        return jsonify({"success": False, "message": "Database network error. Please try again later."}), 500
 
     user = db_result.get("user")
 

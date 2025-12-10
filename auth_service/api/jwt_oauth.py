@@ -16,13 +16,23 @@ jwt_bp = Blueprint('jwt', __name__)
 @jwt_bp.route("/verify", methods=["GET"])
 @jwt_required()
 def verify_jwt():
+    origin = request.headers.get("API-Requested-With", "")
+
+    if origin != "Home Gateway":
+        log(40, "forbidden request not from gateway")
+        return jsonify({"forbidden": True}), 403
+
     user_id = get_jwt_identity()
     return jsonify({"success": True, "user_id": user_id}), 200
 
 
 @jwt_bp.route("/assign", methods=["POST"])
 def assign_jwt():
-    data = request.get_json()
+    try:
+        data = request.get_json()
+    except Exception as e:
+        log(40, "gateway bad response", error=e)
+        return jsonify({"success": False, "message": "Gateway server error"}), 502
 
     username = data.get("username", "")
 

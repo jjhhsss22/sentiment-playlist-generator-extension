@@ -48,7 +48,7 @@ def api_profile():
         g.user_id = user_id
 
     except Exception as e:
-        log(50, "auth server network error", error=str(e))
+        log(40, "auth network error", error=e)
         return jsonify({
             "success": False,
             "message": "Authentication server error. Please try again later."
@@ -67,8 +67,8 @@ def api_profile():
 
         try:
             results = response.json()
-        except Exception:
-            log(40, "db bad response")
+        except Exception as e:
+            log(40, "db bad response", error=e)
             return jsonify({
                 "success": False,
                 "message": "Bad response from database server. Please try again later."
@@ -89,5 +89,5 @@ def api_profile():
         return jsonify({"success": True, "playlists": playlists_data}), 200
 
     except Exception as e:
-        log(50, "db network error", error=str(e))
+        log(50, "db network error", error=e)
         return jsonify({"success": False, "message": "Database server error. Please try again later."}), 500
