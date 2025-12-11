@@ -112,7 +112,7 @@ def signup():
         log(40, "auth jwt assignment or network error", error=e)
         return jsonify({
             "success": False,
-            "message": "Authentication server error. Please try again later."
+            "message": "Authentication server error. Please try again."
         }), 500
 
 
@@ -146,7 +146,7 @@ def login():
             verify_result = verify_response.json()
         except Exception as e:
             log(40, "auth bad response", error=e)
-            return jsonify({"success": False, "message": "bad response from authentication server. Please try again"}), 502
+            return jsonify({"success": False, "message": "bad response from authentication server. Please try again."}), 502
 
         if not verify_response.ok:
             if verify_result.get("forbidden", False):
@@ -165,7 +165,7 @@ def login():
 
     except Exception as e:
         log(40, "auth network error", error=e)
-        return jsonify({"success": False, "message": "Authentication network error. Please try again later."}), 500
+        return jsonify({"success": False, "message": "Authentication network error. Please try again."}), 500
 
     try:
         headers = {"request-id": g.request_id,
@@ -184,12 +184,12 @@ def login():
         try:
             auth_result = auth_response.json()
         except Exception as e:
-            log(40, "auth bad response", error=e)
-            return jsonify({"success": False, "message": "Bad response from authentication server. Please try again"}), 502
+            log(50, "auth bad response", error=e)
+            return jsonify({"success": False, "message": "Bad response from authentication server. Please try again."}), 502
 
         if not auth_response.ok:
             if auth_result.get("forbidden", False):
-                log(30, "auth forbidden")
+                log(40, "auth forbidden")
                 return jsonify({
                     "success": False,
                     "location": "/unknown",
@@ -212,10 +212,10 @@ def login():
         return resp
 
     except Exception as e:
-        log(40, "auth jwt assignment or network error", error=e)
+        log(50, "auth jwt assignment or network error", error=e)
         return jsonify({
             "success": False,
-            "message": "Authentication server error. Please try again later."
+            "message": "Authentication server error. Please try again."
         }), 500
 
 
@@ -251,7 +251,26 @@ def logout():
             timeout=5
         )
 
-        forward_resp = jsonify(resp.json())
+        try:
+            result = resp.json()
+        except Exception as e:
+            log(40, "auth bad response", error=e)
+            return {
+                "success": False,
+                "message": "Bad response from authentication server. Please try again."
+            }, 502
+
+        if resp.status_code != 200:
+            if result.get("forbidden", False):
+                log(40, "auth forbidden")
+                return jsonify({"success": False,
+                                "location": "/unknown",
+                                "message": "Forbidden access"}), 403
+
+            log(40, "auth error", status_code=resp.status_code)
+            return result, resp.status_code
+
+        forward_resp = jsonify(result)
         forward_resp.status_code = resp.status_code
 
         if "Set-Cookie" in resp.headers:
@@ -260,7 +279,7 @@ def logout():
         return forward_resp
 
     except Exception as e:
-        log(40, "auth logout error", error=e)
+        log(50, "auth logout error", error=e)
         return jsonify({
             "success": False,
             "message": "Logout failed. Please try again."
@@ -296,17 +315,23 @@ def verify_user():
             result = resp.json()
         except Exception as e:
             log(40, "auth bad response", error=e)
-            return jsonify({"success": False, "message": "Bad response from authentication server. Please try again"}), 502
+            return jsonify({"success": False, "message": "Bad response from authentication server. Please try again."}), 502
 
         if not resp.status_code == 200:
+            if result.get("forbidden", False):
+                log(40, "auth forbidden")
+                return jsonify({"success": False,
+                                "location": "/unknown",
+                                "message": "Forbidden access"}), 403
+
             log(40, "auth error", status_code=resp.status_code)
             return jsonify(result), resp.status_code
 
-        return jsonify({"success": True, "user_id": result.get("user_id")}), resp.status_code
+        return jsonify(result), resp.status_code
 
     except Exception as e:
-        log(40, "auth verify or network error", error=e)
+        log(50, "authentication or network error", error=e)
         return jsonify({
             "success": False,
-            "message": "Authentication server error. Please try again"
+            "message": "Authentication server error. Please try again."
         }), 500

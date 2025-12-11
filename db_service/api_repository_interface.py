@@ -13,13 +13,13 @@ def return_user():
         log(40, "gateway bad response", error=e)
         return jsonify({
             "success": False,
-            "message": "Bad response from gateway server. Please try again later."
+            "message": "Bad response from gateway server. Please try again."
         }), 502
 
     origin = request.headers.get("API-Requested-With", "")
 
     if origin != "Auth server":
-        log(40, "forbidden request not from auth")
+        log(50, "forbidden request not from auth")
         return jsonify({"forbidden": True}), 403
 
     email = data.get("email")
@@ -41,8 +41,8 @@ def return_user():
         }), 200
 
     except Exception as e:
-        log(40, "database user query or network error", error=e)
-        return jsonify({"success": False, "message": "Internal db server error. Please try again later."}), 500
+        log(50, "database user query or network error", error=e)
+        return jsonify({"success": False, "message": "Internal db server error. Please try again."}), 500
 
 # @app.route('/verification', methods=['GET', 'POST'])
 # def verify_user():
@@ -102,7 +102,7 @@ def new_user():
     origin = request.headers.get("API-Requested-With", "")
 
     if origin != "Auth server":
-        log(40, "forbidden request not from gateway")
+        log(50, "forbidden request not from gateway")
         return jsonify({"forbidden": True}), 403
 
     try:
@@ -125,7 +125,7 @@ def return_playlists():
     origin = request.headers.get("API-Requested-With", "")
 
     if origin != "Home Gateway":
-        log(40, "forbidden request not from gateway")
+        log(50, "forbidden request not from gateway")
         return jsonify({"forbidden": True}), 403
 
     try:
@@ -133,7 +133,7 @@ def return_playlists():
         return jsonify({"success": True, "playlists": playlists_data}), 200
     except Exception as e:
         log(40, "database playlist query error", error=e)
-        return jsonify({"success": False, "message": "Playlist database error"}), 500
+        return jsonify({"success": False, "message": "Internal database error. Please try again."}), 500
 
 
 @db_bp.route('/new-playlist', methods=['POST'])
@@ -141,16 +141,16 @@ def new_playlist():
     try:
         data = request.get_json()
     except Exception as e:
-        log(40, "gateway bad response")
+        log(40, "gateway bad response", error=e)
         return jsonify({
             "success": False,
-            "message": "Bad response from gateway server. Please try again later."
+            "message": "Bad response from gateway server. Please try again."
         }), 502
 
     origin = request.headers.get("API-Requested-With", "")
 
     if origin != "Home Gateway":
-        log(40, "forbidden request not from gateway")
+        log(50, "forbidden request not from gateway")
         return jsonify({"forbidden": True}), 403
 
     try:
@@ -163,5 +163,6 @@ def new_playlist():
         save(new_playlist)
 
         return jsonify({"success": True, "message": "Playlist created successfully"}), 201
-    except Exception:
-        return jsonify({"success": False, "message": "Failed to create playlist"}), 500
+    except Exception as e:
+        log(50, "error during new playlist save", error=e)
+        return jsonify({"success": False, "message": "Failed to create playlist. Please try again."}), 500

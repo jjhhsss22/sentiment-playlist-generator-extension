@@ -15,8 +15,8 @@ def validate():
     try:
         data = request.get_json()
     except Exception as e:
-        log(40, "gateway bad response", error=e)
-        return jsonify({"success": False, "message": "Bad response from gateway server. Please try again later."}), 502
+        log(50, "gateway bad response", error=e)
+        return jsonify({"success": False, "message": "Bad response from gateway server. Please try again."}), 502
 
     origin = request.headers.get("API-Requested-With", "")
 
@@ -63,7 +63,7 @@ def validate():
             query_result = query_response.json()
         except Exception as e:
             log(40, "db bad response", error=e)
-            return jsonify({"success": False, "message": "Bad response from database server. Please try again later."}), 502
+            return jsonify({"success": False, "message": "Bad response from database server. Please try again."}), 502
 
         if not query_response.ok:
             if query_result.get("forbidden", False):
@@ -75,11 +75,11 @@ def validate():
             return jsonify({"success": False, "message": query_message}), query_response.status_code
 
         if query_result.get("user"):
-            return jsonify({"success": False, "message": "Email already registered"}), 409
+            return jsonify({"success": False, "message": "Email already registered."}), 409
 
     except Exception as e:
         log(50, "db network error", error=e)
-        return jsonify({"success": False, "message": "Database server error. Please try again later."}), 500
+        return jsonify({"success": False, "message": "Database server error. Please try again."}), 500
 
     try:
         headers = {"request-id": g.request_id,
@@ -101,7 +101,7 @@ def validate():
             create_result = create_response.json()
         except Exception:
             log(40, "db bad response")
-            return jsonify({"success": False, "message": "Bad response from database server. Please try again later."}), 502
+            return jsonify({"success": False, "message": "Bad response from database server. Please try again."}), 502
 
         if not create_response.ok:
             if create_result.get("forbidden", False):
@@ -115,8 +115,8 @@ def validate():
         return create_result, 201
 
     except Exception as e:
-        log(50, "db network error", error=str(e))
-        return jsonify({"success": False, "message": "Database server error. Please try again later."}), 500
+        log(50, "db network error", error=e)
+        return jsonify({"success": False, "message": "Database server error. Please try again."}), 500
 
 
 @user_auth_bp.route('/verify', methods=['POST'])
@@ -125,7 +125,7 @@ def verify():
         data = request.get_json()
     except Exception as e:
         log(40, "gateway bad response", error=e)
-        return jsonify({"success": False, "message": "Bad response from gateway server. Please try again later."}), 502
+        return jsonify({"success": False, "message": "Bad response from gateway server. Please try again."}), 502
 
     origin = request.headers.get("API-Requested-With", "")
 
@@ -153,7 +153,7 @@ def verify():
             db_result = db_response.json()
         except Exception as e:
             log(40, "db service bad response", error=e)
-            return jsonify({"success": False, "message": "Bad response from database server. Please try again later."}), 502
+            return jsonify({"success": False, "message": "Bad response from database server. Please try again."}), 502
 
         if not db_response.ok:
             if db_result.get("forbidden"):
@@ -166,7 +166,7 @@ def verify():
 
     except Exception as e:
         log(50, "db network error", error=e)
-        return jsonify({"success": False, "message": "Database network error. Please try again later."}), 500
+        return jsonify({"success": False, "message": "Database network error. Please try again."}), 500
 
     user = db_result.get("user")
 

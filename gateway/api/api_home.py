@@ -47,10 +47,17 @@ def home():
             log(40, "auth bad response", error=e)
             return jsonify({
                 "success": False,
-                "message": "Bad response from authentication server. Please try again later."
+                "message": "Bad response from authentication server. Please try again."
             }), 502
 
         if auth_response.status_code != 200:
+            if auth_results.get("forbidden", False):
+                log(40, "auth forbidden")
+                return jsonify({"success": False,
+                                "location": "/unknown",
+                                "message": "Forbidden access"}), 403
+
+            log(40, "auth error", status_code=auth_response.status_code)
             return auth_results, auth_response.status_code
 
         user_id = auth_results.get("user_id")
@@ -60,7 +67,7 @@ def home():
         log(50, "auth server network error", error=e)
         return jsonify({
             "success": False,
-            "message": "Authentication server error. Please try again later."
+            "message": "Authentication server error. Please try again."
         }), 500
 
 # AI ------------------------------------------------------------------------
@@ -91,7 +98,7 @@ def home():
             log(40, "AI bad response", error=e)
             return jsonify({
                 "success": False,
-                "message": "Bad response from AI server. Please try again later."
+                "message": "Bad response from AI server. Please try again."
             }), 502
 
         if not ai_response.ok:
@@ -127,10 +134,10 @@ def home():
                 ai_data = status_data["result"]
 
                 if ai_data.get("success") is False:
-                    log(40, "AI celery task error", status_code=ai_data.get("status_code"))
+                    log(50, "AI celery task error", status_code=ai_data.get("status_code"))
                     return jsonify({
                         "success": False,
-                        "message": ai_data.get("message", "Error when predicting emotion. Please try again later.")
+                        "message": ai_data.get("message", "Error when predicting emotion. Please try again.")
                     }), ai_data.status_code
 
                 predictions_list = ai_data["predictions_list"]
@@ -149,14 +156,14 @@ def home():
             log(40, "AI celery task timeout")
             return jsonify({
                 "success": False,
-                "message": "Prediction timed out. Please try again later."
+                "message": "Prediction timed out. Please try again."
             }), 408
 
     except Exception as e:  # handle network errors
         log(50, "AI celery task network error", error=e)
         return jsonify({
             "success": False,
-            "message": "AI server error. Please try again later."
+            "message": "AI server error. Please try again."
         }), 500
 
 # MUSIC ------------------------------------------------------------------------
@@ -181,7 +188,7 @@ def home():
             log(40, "music bad response", error=e)
             return jsonify({
                 "success": False,
-                "message": "Bad response from music server. Please try again later."
+                "message": "Bad response from music server. Please try again."
             }), 502
 
         if not music_response.ok:
@@ -192,7 +199,7 @@ def home():
                                 "message": "Forbidden access"}), 403
 
             log(40, "music error", status_code=music_response.status_code)
-            music_message = music_results.get("message", "Error when generating playlist. Please try again later.")
+            music_message = music_results.get("message", "Error when generating playlist. Please try again.")
             return jsonify({"success": False, "message": music_message}), music_response.status_code
 
         music_data = music_results["result"]
@@ -210,7 +217,7 @@ def home():
         log(50, "music network error", error=e)
         return jsonify({
             "success": False,
-            "message": "Music server error. Please try again later."
+            "message": "Music server error. Please try again."
             }), 500
 
 # DB ------------------------------------------------------------------------
@@ -237,7 +244,7 @@ def home():
             log(40, "db bad response", error=e)
             return jsonify({
                 "success": False,
-                "message": "Bad response from database server. Please try again later."
+                "message": "Bad response from database server. Please try again."
             }), 502
 
         if not db_response.ok:
@@ -248,7 +255,7 @@ def home():
                                 "message": "Forbidden access"}), 403
 
             log(40, "db error", status_code=db_response.status_code)
-            db_message = db_results.get("message", "Error when saving playlist. Please try again later.")
+            db_message = db_results.get("message", "Error when saving playlist. Please try again.")
             return jsonify({"success": False, "message": db_message}), db_response.status_code
 
         total_time = round(time.time() - start_time, 3)
@@ -268,5 +275,5 @@ def home():
         log(50, "db network error", error=e)
         return jsonify({
             "success": False,
-            "message": "Database server error. Please try again later."
+            "message": "Database server error. Please try again."
         }), 500

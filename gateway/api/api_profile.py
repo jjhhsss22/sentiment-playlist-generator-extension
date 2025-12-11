@@ -38,7 +38,7 @@ def api_profile():
             log(40, "auth bad response", error=e)
             return jsonify({
                 "success": False,
-                "message": "Bad response from authentication server. Please try again later."
+                "message": "Bad response from authentication server. Please try again."
             }), 502
 
         if auth_response.status_code != 200:
@@ -48,10 +48,10 @@ def api_profile():
         g.user_id = user_id
 
     except Exception as e:
-        log(40, "auth network error", error=e)
+        log(50, "auth network error", error=e)
         return jsonify({
             "success": False,
-            "message": "Authentication server error. Please try again later."
+            "message": "Authentication server error. Please try again."
         }), 500
 
     try:
@@ -71,12 +71,12 @@ def api_profile():
             log(40, "db bad response", error=e)
             return jsonify({
                 "success": False,
-                "message": "Bad response from database server. Please try again later."
+                "message": "Bad response from database server. Please try again."
             }), 502
 
         if not response.ok:
             if results.get("forbidden", False):
-                log(30, "db forbidden")
+                log(40, "db forbidden")
                 return jsonify({"success": False,
                                 "location": "/unknown",
                                 "message": "Forbidden access"}), 403
@@ -90,4 +90,4 @@ def api_profile():
 
     except Exception as e:
         log(50, "db network error", error=e)
-        return jsonify({"success": False, "message": "Database server error. Please try again later."}), 500
+        return jsonify({"success": False, "message": "Database server error. Please try again."}), 500

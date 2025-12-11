@@ -13,13 +13,13 @@ def return_prediction():
         log(40, "gateway bad response", error=e)
         return jsonify({
             "success": False,
-            "message": "Bad response from gateway server. Please try again later."
+            "message": "Bad response from gateway server. Please try again."
         }), 502
 
     origin = request.headers.get("API-Requested-With", "")
 
     if origin != "Home Gateway":
-        log(40, "forbidden request not from gateway")
+        log(50, "forbidden request not from gateway")
         return jsonify({"forbidden": True}), 403
 
     input_text = data.get("text", "").strip()
@@ -29,10 +29,10 @@ def return_prediction():
         task = run_prediction_task.delay(input_text, desired_emotion)
         return jsonify({"success": True, "task_id": task.id}), 200
     except Exception as e:
-        log(40, "failed to start celery task", error=e)
+        log(50, "failed to start celery task", error=e)
         return jsonify({
             "success": False,
-            "message": "Failed to start AI prediction."
+            "message": "Failed to start emotion prediction."
         }), 500
 
 
@@ -48,7 +48,7 @@ def get_task_status(task_id):
     # elif task.state == "FAILURE":
     #     return jsonify({"status": "error", "message": str(task.info)})
     else:
-        log(40, "celery task failed", task_id=task.id, task_state=task.state)
+        log(50, "celery task failed", task_id=task.id, task_state=task.state)
         return jsonify({"status": task.state}), 500
 
 

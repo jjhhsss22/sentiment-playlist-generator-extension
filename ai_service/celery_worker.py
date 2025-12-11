@@ -44,7 +44,7 @@ def run_prediction_task(input_text, desired_emotion):
 
     except Exception as e:
         task_log(
-            40,
+            50,
             "celery task failure",
             task_id=run_prediction_task.request.id,
             error=f"{e.__class__.__name__}: {str(e)}"
