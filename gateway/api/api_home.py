@@ -3,6 +3,7 @@ import requests
 import time
 
 from gateway.log_logic.log_util import log
+from gateway.celery_worker import generate_playlist_pipeline
 
 api_home_bp = Blueprint('api_home', __name__)
 
@@ -10,6 +11,32 @@ AI_API_URL = "http://127.0.0.1:8001"
 MUSIC_API_URL = "http://127.0.0.1:8002/create-playlist"
 DB_API_URL = "http://127.0.0.1:8003/new-playlist"
 AUTH_API_URL = "http://127.0.0.1:8004/jwt/verify"
+
+
+# @api_home_bp.route('/home', methods=['GET', 'POST'])
+# def home():
+#     if request.headers.get("X-Requested-With") != "ReactApp":
+#         log(30, "forbidden request received")
+#
+#         return jsonify({"success": False,
+#                         "location": "/unknown",
+#                         "message": "Forbidden access"}), 403
+#
+#     data = request.get_json()
+#     input_text = data.get("text", "").strip()
+#     desired_emotion = data.get("emotion", None)
+#
+#     task = generate_playlist_pipeline.delay(
+#         input_text,
+#         desired_emotion,
+#         g.user_id,
+#         g.request_id
+#     )
+#
+#     return jsonify({
+#         "success": True,
+#         "task_id": task.id
+#     })
 
 
 @api_home_bp.route('/home', methods=['GET', 'POST'])

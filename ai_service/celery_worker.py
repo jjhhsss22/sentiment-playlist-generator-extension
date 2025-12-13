@@ -11,10 +11,14 @@ sys.path.append("/app")  # for docker
 redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
 celery = Celery(
-    "ai_tasks",
+    "ai",
     broker=redis_url,
     backend=redis_url,
 )
+
+celery.conf.task_routes = {
+    "ai.*": {"queue": "ai"}
+}
 
 celery.conf.update(
     task_serializer="json",
@@ -33,8 +37,8 @@ sentiment_model.compile(optimizer="adam",
 
 
 
-@celery.task
-def run_prediction_task(input_text, desired_emotion):
+@celery.task(name="ai.predict_emotion", bind=True, autoretry_for=[InvalidArgumentError, Exception,], retry_kwargs={"max_retries": 3})
+def run_prediction_task(self, input_text, desired_emotion, user_id, request_id):
     try:
         from deployment.ai_module import run_prediction_pipeline
         return run_prediction_pipeline(sentiment_model, input_text, desired_emotion)
@@ -46,9 +50,10 @@ def run_prediction_task(input_text, desired_emotion):
         task_log(
             50,
             "celery task failure",
-            task_id=run_prediction_task.request.id,
+            task_id=self.request.id,
             error=f"{e.__class__.__name__}: {str(e)}"
         )
-        return {"success": False, "message": "AI task failed"}
+        # return {"success": False, "message": "AI task failed"}
+        raise
 
 # celery -A celery_worker:celery worker -l INFO -P solo

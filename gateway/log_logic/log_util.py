@@ -1,5 +1,5 @@
 from flask import request, current_app, g
-from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+import logging
 
 def log(level, event, **extra_kwargs):
     """
@@ -14,6 +14,22 @@ def log(level, event, **extra_kwargs):
             "method": request.method,
             "user_id": getattr(g, "user_id", None),
             "ip": request.remote_addr,
+            **extra_kwargs
+        }
+    )
+
+def task_log(level, event, task_id=None, **extra_kwargs):
+    """
+    Logging utility for Celery tasks.
+    No Flask, no request, no JWT.
+    """
+
+    logging.getLogger().log(
+        level,
+        {
+            "event": event,
+            "user_id": getattr(g, "user_id", None),
+            "task_id": task_id,
             **extra_kwargs
         }
     )
