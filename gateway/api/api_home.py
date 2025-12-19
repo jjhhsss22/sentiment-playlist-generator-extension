@@ -116,8 +116,10 @@ def home():
             headers=headers,
             json={
             "text": input_text,
-            "emotion": desired_emotion,
-        })
+            "emotion": desired_emotion
+            },
+            timeout=5
+        )
 
         try:
             ai_results = ai_response.json()
@@ -149,7 +151,7 @@ def home():
             '''
 
             time.sleep(0.5)
-            status_resp = requests.get(f"{AI_API_URL}/task/{task_id}")
+            status_resp = requests.get(f"{AI_API_URL}/task/{task_id}", timeout=5)
 
             try:
                 status_data = status_resp.json()
@@ -207,7 +209,9 @@ def home():
             json={
             "starting_coord": starting_coord,
             "target_coord": target_coord,
-        })
+            },
+            timeout=5
+        )
 
         try:
             music_results = music_response.json()
@@ -263,7 +267,9 @@ def home():
                 "likely_emotion": likely_emotion,
                 "desired_emotion": desired_emotion,
                 "playlist_text": playlist_text,
-            })
+                },
+                timeout=5
+            )
 
         try:
             db_results = db_response.json()

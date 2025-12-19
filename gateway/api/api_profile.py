@@ -62,7 +62,8 @@ def api_profile():
 
         response = requests.post(
             DB_API_URL,
-            headers=headers
+            headers=headers,
+            timeout=5
         )
 
         try:

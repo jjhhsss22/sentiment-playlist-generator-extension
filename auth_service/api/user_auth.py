@@ -57,7 +57,9 @@ def validate():
             headers=headers,
             json={
                 "email": email
-            })
+                },
+            timeout=5
+            )
 
         try:
             query_result = query_response.json()
@@ -95,7 +97,9 @@ def validate():
                 "email": email,
                 "username": username,
                 "hashed_password": hashed_password
-            })
+            },
+            timeout=5
+            )
 
         try:
             create_result = create_response.json()
@@ -147,7 +151,9 @@ def verify():
             headers=headers,
             json={
                 "email": email
-            })
+            },
+            timeout=5
+        )
 
         try:
             db_result = db_response.json()

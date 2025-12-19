@@ -30,7 +30,8 @@ def signup():
         validate_response = requests.post(
             f"{AUTH_API_URL}/user/validate",
             headers=headers,
-            json=data
+            json=data,
+            timeout=5
         )
 
         try:
@@ -73,7 +74,8 @@ def signup():
             headers=headers,
             json={
                 "username": username
-            }
+            },
+            timeout=5
         )
 
         try:
@@ -139,7 +141,8 @@ def login():
         verify_response = requests.post(
             f"{AUTH_API_URL}/user/verify",
             headers=headers,
-            json=data
+            json=data,
+            timeout=5
         )
 
         try:
@@ -178,7 +181,8 @@ def login():
             headers=headers,
             json={
                 "username": username
-            }
+            },
+            timeout=5
         )
 
         try:
