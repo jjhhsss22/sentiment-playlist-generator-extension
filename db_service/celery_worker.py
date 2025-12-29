@@ -1,7 +1,6 @@
-from celery import Celery
+from celery import Celery, signature
 import os
 import sys
-
 from log_logic.log_util import task_log
 
 # sys.path.append("/app")  # for docker
@@ -16,7 +15,8 @@ celery = Celery(
 )
 
 celery.conf.task_routes = {
-    "db.*": {"queue": "db"}
+    "db.*": {"queue": "db"},
+    "db.dlq.*": {"queue": "db_dlq"},  # Dead Letter Queue for failed saves
 }
 
 celery.conf.update(
@@ -27,25 +27,43 @@ celery.conf.update(
     enable_utc=True,
 )
 
-from db_structure.db_module import create_playlist, save
 
-@celery.task(name="db.save_new_playlist", bind=True, autoretry_for=[Exception,], retry_kwargs={"max_retries": 2})
-def save_new_playlist(self, new_playlist, user_id, request_id, pipeline_data):
-    try:
-        input_text = new_playlist["input_text"]
-        likely_emotion = new_playlist["likely_emotion"]
-        desired_emotion = new_playlist["desired_emotion"]
-        playlist_text = new_playlist["playlist_text"]
-        user_id = user_id
-    except Exception as e:
-        raise
+
+@celery.task(
+    name="db.save_new_playlist",
+    bind=True,
+    autoretry_for=(Exception,),
+    retry_kwargs={"max_retries": 2},
+    retry_backoff=True,
+    retry_jitter=True,
+)
+def save_new_playlist(self, pipeline_data):
+
+    self.update_state(
+        state="PROGRESS",
+        meta={"step": "Saving playlist..."}
+    )
 
     try:
-        playlist = create_playlist(input_text, likely_emotion, desired_emotion, playlist_text, user_id)
+        from db_structure.db_module import create_playlist, save
+
+        playlist = create_playlist(
+            pipeline_data["text"],
+            pipeline_data["ai_result"]["likely_emotion"],
+            pipeline_data["desired_emotion"],
+            pipeline_data["playlist_result"]["text"],
+            pipeline_data["user_id"],
+        )
         save(playlist)
+
     except Exception as e:
+        signature(
+            "db.dlq.save_failed_playlist",
+            args=(pipeline_data, str(e)),
+        ).apply_async()
         raise
 
-    return {
-        pipeline_data
-    }
+
+@celery.task(name="db.dlq.save_failed_playlist")
+def handle_failed_playlist(pipeline_data, error_message):
+    pass  # can save failed playlist data in another table for example and retry

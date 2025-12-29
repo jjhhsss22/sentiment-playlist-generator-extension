@@ -15,7 +15,7 @@ def log(level, event, **extra_kwargs):
         }
     )
 
-def task_log(level, event, task_id=None, **extra_kwargs):
+def task_log(level, event, request_id="", user_id=None, task_id=None, **extra_kwargs):
     """
     Logging utility for Celery tasks.
     No Flask, no request, no JWT.
@@ -25,7 +25,8 @@ def task_log(level, event, task_id=None, **extra_kwargs):
         level,
         {
             "event": event,
-            "user_id": getattr(g, "user_id", None),
+            "request_id": request_id,
+            "user_id": user_id,
             "task_id": task_id,
             **extra_kwargs
         }

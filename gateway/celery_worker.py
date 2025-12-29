@@ -1,9 +1,7 @@
 from celery import Celery
 from celery import chain
-
 import os
 import sys
-
 from log_logic.log_util import task_log
 
 # sys.path.append("/app")  # for docker
@@ -29,19 +27,22 @@ celery.conf.update(
     enable_utc=True,
 )
 
-@celery.task(name="gateway.full_playlist_generation_pipeline")
-def generate_playlist_pipeline(text, desired_emotion, user_id, request_id):
+@celery.task(name="gateway.full_playlist_generation_pipeline", bind=True)
+def generate_playlist_pipeline(self, text, desired_emotion, user_id, request_id):
+
+    pipeline_data = {
+        "text": text,
+        "desired_emotion": desired_emotion,
+        "user_id": user_id,
+        "request_id": request_id,
+    }
 
     workflow = chain(
-        celery.signature(
-            "ai.predict_emotion",
-            args=(text, desired_emotion, user_id, request_id)
-        ),
+        celery.signature("ai.predict_emotion", args=(pipeline_data,)),
         celery.signature("music.generate_playlist"),
-        celery.signature("db.save_new_playlist"),
     )  # chain = output of previous celery task --> input of next celery task
 
     result = workflow.apply_async()
     return {
-        "id": result.id
+        "id": result.parent.id if result.parent else result.id
         }

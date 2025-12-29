@@ -1,4 +1,5 @@
 from celery import Celery
+from celery.exceptions import Ignore
 import os
 import sys
 import tensorflow as tf
@@ -37,23 +38,52 @@ sentiment_model.compile(optimizer="adam",
 
 
 
-@celery.task(name="ai.predict_emotion", bind=True, autoretry_for=[InvalidArgumentError, Exception,], retry_kwargs={"max_retries": 3})
-def run_prediction_task(self, input_text, desired_emotion, user_id, request_id):
+@celery.task(
+    name="ai.predict_emotion",
+    bind=True,
+    autoretry_for=[Exception,],  # TODO - make this more narrow
+    retry_kwargs={"max_retries": 3},
+    retry_backoff=True,  # retries wait longer each time (exponential)
+    retry_jitter=True,  # retries randomly staggered
+)
+def run_prediction_task(self, pipeline_data):
+
+    self.update_state(
+        state="PROGRESS",
+        meta={"step": "Generating emotion prediction..."},
+    )
+
     try:
         from deployment.ai_module import run_prediction_pipeline
-        return run_prediction_pipeline(sentiment_model, input_text, desired_emotion)
+        result = run_prediction_pipeline(
+            sentiment_model,
+            pipeline_data["text"],
+            pipeline_data["desired_emotion"]
+        )
+
+        pipeline_data.update({
+            "ai_result": result,
+        })
+
+        return pipeline_data
 
     except InvalidArgumentError:
-        return {"success": False, "message": "please type in full sentences"}
+        self.update_state(
+            state="FAILURE",
+            meta={"success": False,
+                  "message": "Invalid input. Please type in full sentences"}
+        )
+        raise Ignore()
 
     except Exception as e:
         task_log(
             50,
             "celery task failure",
+            request_id=pipeline_data["request_id"],
+            user_id=pipeline_data["user_id"],
             task_id=self.request.id,
             error=f"{e.__class__.__name__}: {str(e)}"
         )
-        # return {"success": False, "message": "AI task failed"}
         raise
 
 # celery -A celery_worker:celery worker -l INFO -P solo
