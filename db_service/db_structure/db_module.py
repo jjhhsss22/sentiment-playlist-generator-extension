@@ -1,5 +1,6 @@
 from db_service.db_structure.dbmodels import User, Playlist, db
 from werkzeug.security import generate_password_hash
+from sqlalchemy.exc import IntegrityError
 
 
 def create_user(email, username, password):
@@ -34,15 +35,26 @@ def get_playlists(user_id):
     return playlist_data
 
 
-def create_playlist(input_text, likely_emotion, desired_emotion, playlist_text, id):
+def create_playlist(input_text, likely_emotion, desired_emotion, playlist_text, id, request_id):
     new_playlist = Playlist(prompt=input_text,
                             start_emotion=likely_emotion,
                             target_emotion=desired_emotion,
                             playlist=playlist_text,
-                            user_id=id)
+                            user_id=id,
+                            request_id=request_id)
 
     return new_playlist
 
-def save(new_record):
-    db.session.add(new_record)
-    db.session.commit()
+def save(record):
+    try:
+        db.session.add(record)
+        db.session.commit()
+        return record
+
+    except IntegrityError:  # data conflict
+        db.session.rollback()
+        raise
+
+    except Exception:
+        db.session.rollback()
+        raise

@@ -1,4 +1,6 @@
 from celery import Celery, signature
+from celery.exceptions import Ignore
+from sqlalchemy.exc import IntegrityError
 import os
 import sys
 from log_logic.log_util import task_log
@@ -53,8 +55,16 @@ def save_new_playlist(self, pipeline_data):
             pipeline_data["desired_emotion"],
             pipeline_data["playlist_result"]["text"],
             pipeline_data["user_id"],
+            pipeline_data["request_id"]
         )
         save(playlist)
+
+    except IntegrityError:
+        self.update_state(
+            state="SUCCESS",
+            meta={"message": "Playlist already saved"},
+        )
+        raise Ignore()
 
     except Exception as e:
         signature(

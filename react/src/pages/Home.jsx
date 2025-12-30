@@ -3,6 +3,7 @@ import api from "../utils/axios.jsx";
 import { navTo } from "../utils/navigate.jsx";
 import { showMessage } from "../utils/showMessage.jsx";
 import { handleLogout } from "../utils/auth.jsx";
+import { generateRequestId } from "../utils/generateRequestId.jsx";
 
 export default function Home() {
 
@@ -59,8 +60,19 @@ export default function Home() {
       return;
     }
 
+    const request_id = generateRequestId();
+    sessionStorage.setItem("last_request_id", request_id);
+
     try {
-      const { data } = await api.post("/home", formData);  // JSON automatically
+      const { data } = await api.post("/home",
+        formData,
+        {
+          headers: {
+            "request-id": request_id,
+          },
+        }
+      );  // JSON automatically
+
 
       console.log("Response data:", data);
 

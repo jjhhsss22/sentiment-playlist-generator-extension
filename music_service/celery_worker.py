@@ -54,17 +54,4 @@ def generate_playlist(self, pipeline_data):
     except Exception as e:
         raise
 
-    signature(
-        "db.save_new_playlist",
-        args=(pipeline_data,),
-    ).apply_async()  # fire-and-forget db save for faster response to client (non-blocking)
-
-    return {
-        "success": True,
-        "message": "Playlist generated successfully!",
-        "desired_emotion": pipeline_data["ai_result"]["desired_emotion"],
-        "songs_playlist": pipeline_data["playlist_result"]["list"],
-        "predicted_emotions": pipeline_data["ai_result"]["predicted_emotions"],
-        "predictions_list": pipeline_data["ai_result"]["predictions_list"],
-        "others_prediction": pipeline_data["ai_result"]["others_probability"]
-    }
+    return pipeline_data

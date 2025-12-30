@@ -22,5 +22,6 @@ class Playlist(db.Model):
     playlist = db.Column(db.Text, nullable=False)  # playlist will just be one long string with songs separated by commas
     playlist_creation_date = db.Column(db.Date, default=date.today, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # foreign key from User
+    request_id = db.Column(db.String(40), nullable=False, unique=True, index=True)  # idempotency key
 
 

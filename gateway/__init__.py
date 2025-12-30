@@ -30,7 +30,7 @@ def create_app():
     def assign_request_id():
         # 1. If client sent one, reuse it
         incoming = request.headers.get("request-id")
-        g.request_id = incoming or str(uuid.uuid4())
+        g.request_id = incoming or str(uuid.uuid4().hex)
 
     # @app.after_request
     # def add_request_and_user_id_header(response):
