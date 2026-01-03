@@ -2,6 +2,7 @@ from flask import Flask, g, request
 import uuid
 from log_logic.gw_logging_config import configure_logging
 import logging
+import redis
 
 def create_app():
     configure_logging() # logging setup
@@ -10,6 +11,11 @@ def create_app():
     log.setLevel(logging.WARNING)
 
     app = Flask(__name__)  # set up flask environment
+
+    app.extensions["redis_cache"] = redis.Redis.from_url(
+        "redis://localhost:6379/1",  # cache DB in redis instance
+        decode_responses=True
+    )
 
     from api.api_profile import api_profile_bp
     from api.api_home import api_home_bp
