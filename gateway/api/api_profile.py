@@ -1,7 +1,7 @@
 from flask import jsonify, request, Blueprint, g
 import requests
 
-from gateway.log_logic.log_util import log
+from log_logic.log_util import log
 
 api_profile_bp = Blueprint('api_profile', __name__)
 

@@ -4,8 +4,8 @@ import time
 import redis
 import json
 
-from gateway.log_logic.log_util import log
-from gateway.celery_worker import generate_playlist_pipeline
+from log_logic.log_util import log
+from celery_worker import generate_playlist_pipeline  # correct import scope?
 
 api_home_bp = Blueprint('api_home', __name__)
 
@@ -15,7 +15,7 @@ DB_API_URL = "http://127.0.0.1:8003/new-playlist"
 AUTH_API_URL = "http://127.0.0.1:8004/jwt/verify"
 
 
-def get_redis_cache():  # used in home api
+def get_redis_cache():  # used in home route
     return current_app.extensions.get("redis_cache")
 
 

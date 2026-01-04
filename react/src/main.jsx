@@ -10,6 +10,7 @@ import Unknown from "./pages/Unknown.jsx"
 
 import ProtectedRoute from "./components/ProtectedRoute.jsx"
 import NavigateWrapper from "./components/NavigateWrapper.jsx"
+import WebSocketWrapper from "./components/WebSocketWrapper.jsx"
 
 import "./styles/index.css";
 
@@ -25,7 +26,9 @@ root.render(
 
           <Route path="/home" element={
             <ProtectedRoute>
-              <Home />
+              <WebSocketWrapper>
+                <Home />
+              </WebSocketWrapper>
             </ProtectedRoute>
           } />
 

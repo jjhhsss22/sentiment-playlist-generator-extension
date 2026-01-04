@@ -4,6 +4,7 @@ import redis
 import json
 import os
 import sys
+
 from log_logic.log_util import task_log
 
 # sys.path.append("/app")  # for docker
@@ -82,4 +83,12 @@ def finalise_playlist(self, pipeline_data):
         args=(pipeline_data,),
     ).apply_async()  # fire-and-forget db save for faster response to client (non-blocking)
 
+
+    redis_cache.publish(  # for subscriber thread for websocket
+        "playlist:completed",
+        json.dumps({
+            "request_id": pipeline_data["request_id"],
+            "result": final_result,
+        })
+    )
     return final_result

@@ -241,6 +241,7 @@ def logout():
 
     try:
         headers = {"request-id": g.request_id,
+                   "user-id": str(g.user_id),
                    "API-Requested-With": "Home Gateway"
                    }
 

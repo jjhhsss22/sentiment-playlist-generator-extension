@@ -41,8 +41,59 @@ def return_user():
         }), 200
 
     except Exception as e:
-        log(50, "database user query or network error", error=e)
+        log(50, "database user query or network error", error=e, email=email)
         return jsonify({"success": False, "message": "Internal db server error. Please try again."}), 500
+
+
+@db_bp.route('/new-user', methods=['POST'])
+def new_user():
+    try:
+        data = request.get_json()
+    except Exception as e:
+        log(40, "gateway bad response", error=e)
+        return jsonify({
+            "success": False,
+            "message": "Bad response from gateway server. Please try again later."
+        }), 502
+
+    origin = request.headers.get("API-Requested-With", "")
+    g.request_id = request.headers.get("request-id")
+
+    if origin != "Auth server":
+        log(50, "forbidden request not from gateway")
+        return jsonify({"forbidden": True}), 403
+
+    try:
+        email = data.get("email")
+        username = data.get("username")
+        hashed_password = data.get("hashed_password")
+
+        new_user = create_user(email, username, hashed_password)
+        save(new_user)
+
+        return jsonify({"success": True, "message": "User created successfully", "user_id": new_user.id}), 201
+    except Exception as e:
+        log(40, "database user creation error", error=e, email=email)
+        return jsonify({"success": False, "message": "Failed to create user"}), 500
+
+
+@db_bp.route('/playlist', methods=['POST'])
+def return_playlists():
+
+    origin = request.headers.get("API-Requested-With", "")
+    g.request_id = request.headers.get("request-id")
+    g.user_id = request.headers.get("user-id")
+
+    if origin != "Home Gateway":
+        log(50, "forbidden request not from gateway")
+        return jsonify({"forbidden": True}), 403
+
+    try:
+        playlists_data = get_playlists(g.user_id)
+        return jsonify({"success": True, "playlists": playlists_data}), 200
+    except Exception as e:
+        log(40, "database playlist query error", error=e)
+        return jsonify({"success": False, "message": "Internal database error. Please try again."}), 500
 
 # @app.route('/verification', methods=['GET', 'POST'])
 # def verify_user():
@@ -88,81 +139,33 @@ def return_user():
 #         return jsonify({"success": False, "message": "Internal db server error"}), 500
 
 
-@db_bp.route('/new-user', methods=['POST'])
-def new_user():
-    try:
-        data = request.get_json()
-    except Exception as e:
-        log(40, "gateway bad response", error=e)
-        return jsonify({
-            "success": False,
-            "message": "Bad response from gateway server. Please try again later."
-        }), 502
-
-    origin = request.headers.get("API-Requested-With", "")
-
-    if origin != "Auth server":
-        log(50, "forbidden request not from gateway")
-        return jsonify({"forbidden": True}), 403
-
-    try:
-        email = data.get("email")
-        username = data.get("username")
-        hashed_password = data.get("hashed_password")
-
-        new_user = create_user(email, username, hashed_password)
-        save(new_user)
-
-        return jsonify({"success": True, "message": "User created successfully", "user_id": new_user.id}), 201
-    except Exception as e:
-        log(40, "database user creation error", error=e)
-        return jsonify({"success": False, "message": "Failed to create user"}), 500
-
-
-@db_bp.route('/playlist', methods=['POST'])
-def return_playlists():
-
-    origin = request.headers.get("API-Requested-With", "")
-
-    if origin != "Home Gateway":
-        log(50, "forbidden request not from gateway")
-        return jsonify({"forbidden": True}), 403
-
-    try:
-        playlists_data = get_playlists(g.user_id)
-        return jsonify({"success": True, "playlists": playlists_data}), 200
-    except Exception as e:
-        log(40, "database playlist query error", error=e)
-        return jsonify({"success": False, "message": "Internal database error. Please try again."}), 500
-
-
-@db_bp.route('/new-playlist', methods=['POST'])
-def new_playlist():
-    try:
-        data = request.get_json()
-    except Exception as e:
-        log(40, "gateway bad response", error=e)
-        return jsonify({
-            "success": False,
-            "message": "Bad response from gateway server. Please try again."
-        }), 502
-
-    origin = request.headers.get("API-Requested-With", "")
-
-    if origin != "Home Gateway":
-        log(50, "forbidden request not from gateway")
-        return jsonify({"forbidden": True}), 403
-
-    try:
-        input_text = data.get("text")
-        likely_emotion = data.get("likely_emotion")
-        desired_emotion = data.get("desired_emotion")
-        playlist_text = data.get("playlist_text")
-
-        new_playlist = create_playlist(input_text, likely_emotion, desired_emotion, playlist_text, g.user_id)
-        save(new_playlist)
-
-        return jsonify({"success": True, "message": "Playlist created successfully"}), 201
-    except Exception as e:
-        log(50, "error during new playlist save", error=e)
-        return jsonify({"success": False, "message": "Failed to create playlist. Please try again."}), 500
+# @db_bp.route('/new-playlist', methods=['POST'])
+# def new_playlist():
+#     try:
+#         data = request.get_json()
+#     except Exception as e:
+#         log(40, "gateway bad response", error=e)
+#         return jsonify({
+#             "success": False,
+#             "message": "Bad response from gateway server. Please try again."
+#         }), 502
+#
+#     origin = request.headers.get("API-Requested-With", "")
+#
+#     if origin != "Home Gateway":
+#         log(50, "forbidden request not from gateway")
+#         return jsonify({"forbidden": True}), 403
+#
+#     try:
+#         input_text = data.get("text")
+#         likely_emotion = data.get("likely_emotion")
+#         desired_emotion = data.get("desired_emotion")
+#         playlist_text = data.get("playlist_text")
+#
+#         new_playlist = create_playlist(input_text, likely_emotion, desired_emotion, playlist_text, g.user_id)
+#         save(new_playlist)
+#
+#         return jsonify({"success": True, "message": "Playlist created successfully"}), 201
+#     except Exception as e:
+#         log(50, "error during new playlist save", error=e)
+#         return jsonify({"success": False, "message": "Failed to create playlist. Please try again."}), 500

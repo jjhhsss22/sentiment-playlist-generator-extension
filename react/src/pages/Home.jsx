@@ -4,6 +4,7 @@ import { navTo } from "../utils/navigate.jsx";
 import { showMessage } from "../utils/showMessage.jsx";
 import { handleLogout } from "../utils/auth.jsx";
 import { generateRequestId } from "../utils/generateRequestId.jsx";
+import { getPlaylistTask } from "../socket/getPlaylistTask.jsx";
 
 export default function Home() {
 
@@ -36,6 +37,24 @@ export default function Home() {
   const [errors, setErrors] = useState({});
   const [general, setGeneral] = useState("");
   const [success, setSuccess] = useState("");
+
+  const [requestId, setRequestId] = useState(
+    sessionStorage.getItem("last_request_id")  // get Idempotency key just in case of a repeated request
+  );
+
+  const { status, result } = getPlaylistTask(requestId);  // listener will run when requestId exists
+
+  useEffect(() => {
+    if (!result) return;
+
+    setPredictions(result.predictions_list || []);
+    setPredictedEmotions(result.predicted_emotions || []);
+    setPredictedOthers(result.others_prediction || 0);
+    setDesiredEmotion(result.desired_emotion || "");
+    setSongs(result.songs_playlist || []);
+
+    showMessage(setSuccess, "Playlist generated successfully!");
+  }, [result]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -73,15 +92,7 @@ export default function Home() {
         }
       );  // JSON automatically
 
-
       console.log("Response data:", data);
-
-      setPredictions(data.predictions_list || []);
-      setPredictedEmotions(data.predicted_emotions || []);
-      setPredictedOthers(data.others_prediction || 0);
-      setDesiredEmotion(data.desired_emotion || "");
-      setSongs(data.songs_playlist || []);
-      showMessage(setSuccess, "Playlist generated successfully!");
 
     } catch (err) {
       if (!err.response) {

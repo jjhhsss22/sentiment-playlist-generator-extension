@@ -3,6 +3,8 @@ import uuid
 from log_logic.gw_logging_config import configure_logging
 import logging
 import redis
+from websocket.socket import socketio
+from websocket.redis_subscriber import start_listener
 
 def create_app():
     configure_logging() # logging setup
@@ -16,6 +18,9 @@ def create_app():
         "redis://localhost:6379/1",  # cache DB in redis instance
         decode_responses=True
     )
+
+    socketio.init_app(app)
+    start_listener()  # start redis subscriber thread (1 per gateway instance)
 
     from api.api_profile import api_profile_bp
     from api.api_home import api_home_bp

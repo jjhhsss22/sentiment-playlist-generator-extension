@@ -6,7 +6,7 @@ export default function ProtectedRoute({ children }) {
   const [valid, setValid] = useState(null);
 
   useEffect(() => {
-    async function check() {
+    async function checkJWT() {
       try {
         const { data } = await api.get("/verify"); // GET request to verify JWT
         if (data?.user_id) {
@@ -20,7 +20,7 @@ export default function ProtectedRoute({ children }) {
       }
     }
 
-    check();
+    checkJWT();
   }, []);
 
   if (valid === null) return <div>Loading...</div>;
