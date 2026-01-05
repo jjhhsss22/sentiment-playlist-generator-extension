@@ -4,6 +4,8 @@ import os
 import sys
 import tensorflow as tf
 from tensorflow.errors import InvalidArgumentError
+from requests.exceptions import Timeout, ConnectionError
+from json import JSONDecodeError
 
 from log_logic.log_util import task_log
 
@@ -41,7 +43,7 @@ sentiment_model.compile(optimizer="adam",
 @celery.task(
     name="ai.predict_emotion",
     bind=True,
-    autoretry_for=[Exception,],  # TODO - make this more narrow
+    autoretry_for=(Timeout, ConnectionError),
     retry_kwargs={"max_retries": 3},
     retry_backoff=True,  # retries wait longer each time (exponential)
     retry_jitter=True,  # retries randomly staggered
@@ -75,15 +77,39 @@ def run_prediction_task(self, pipeline_data):
         )
         raise Ignore()
 
-    except Exception as e:
+    except (KeyError, TypeError, JSONDecodeError) as e:
         task_log(
-            50,
-            "celery task failure",
+            40,
+            "pipeline_data_error",
+            request_id=pipeline_data.get("request_id"),
+            user_id=pipeline_data.get("user_id"),
+            task_id=self.request.id,
+            error = f"{e.__class__.__name__}: {str(e) or 'no message'}",
+        )
+        raise
+
+    except (Timeout, ConnectionError) as e:
+        task_log(
+            40,
+            "infra_failure_retrying",
             request_id=pipeline_data["request_id"],
             user_id=pipeline_data["user_id"],
             task_id=self.request.id,
-            error=f"{e.__class__.__name__}: {str(e)}"
+            error = f"{e.__class__.__name__}: {str(e) or 'no message'}",
         )
         raise
+
+    except Exception as e:
+        is_final_attempt = self.request.retries >= self.max_retries
+
+        task_log(
+            40 if not is_final_attempt else 50,
+            "unhandled_exception",
+            request_id=pipeline_data["request_id"],
+            user_id=pipeline_data["user_id"],
+            task_id=self.request.id,
+            error = f"{e.__class__.__name__}: {str(e) or 'no message'}",
+        )
+        raise Ignore()
 
 # celery -A celery_worker:celery worker -l INFO -P solo

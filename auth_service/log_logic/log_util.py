@@ -8,7 +8,6 @@ def log(level, event, **extra_kwargs):
             "event": event,
             "path": request.path,
             "method": request.method,
-            "request_id": getattr(g, "request_id", None),
             "user_id": getattr(g, "user_id", None),
             "ip": request.remote_addr,
             **extra_kwargs

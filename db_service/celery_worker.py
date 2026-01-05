@@ -38,6 +38,7 @@ celery.conf.update(
     retry_kwargs={"max_retries": 2},
     retry_backoff=True,
     retry_jitter=True,
+    retry_exclude=(IntegrityError,),
 )
 def save_new_playlist(self, pipeline_data):
 
@@ -57,20 +58,41 @@ def save_new_playlist(self, pipeline_data):
             pipeline_data["user_id"],
             pipeline_data["request_id"]
         )
+
         save(playlist)
 
-    except IntegrityError:
-        self.update_state(
-            state="SUCCESS",
-            meta={"message": "Playlist already saved"},
+    except IntegrityError as e:
+        task_log(
+            20,
+            "db.playlist_already_exists",
+            request_id=pipeline_data["request_id"],
+            user_id=pipeline_data["user_id"],
+            task_id=self.request.id,
+            error=f"{e.__class__.__name__}: {str(e) or 'no message'}",
         )
         raise Ignore()
 
+
     except Exception as e:
-        signature(
-            "db.dlq.save_failed_playlist",
-            args=(pipeline_data, str(e)),
-        ).apply_async()
+        is_final_attempt = self.request.retries >= self.max_retries
+
+        task_log(
+            40 if is_final_attempt else 50,
+            "db.save_failed",
+            request_id=pipeline_data["request_id"],
+            user_id=pipeline_data["user_id"],
+            task_id=self.request.id,
+            retry=self.request.retries,
+            max_retries=self.max_retries,
+            error=f"{e.__class__.__name__}: {str(e)}",
+        )
+
+        if is_final_attempt:
+            signature(
+                "db.dlq.save_failed_playlist",
+                args=(pipeline_data, f"{e.__class__.__name__}: {str(e)}"),
+            ).apply_async()
+
         raise
 
 
