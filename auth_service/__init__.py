@@ -6,8 +6,8 @@ import logging
 def create_auth():
     configure_logging()
 
-    log = logging.getLogger('werkzeug')
-    log.setLevel(logging.WARNING)
+    wz_log = logging.getLogger('werkzeug')
+    wz_log.setLevel(logging.WARNING)
 
     from log_logic.log_util import log
 

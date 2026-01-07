@@ -1,9 +1,9 @@
-from flask import request, current_app, g
+from flask import request, g
 import logging
 
 def log(level, event, **extra_kwargs):
 
-    current_app.logger.log(
+    logging.getLogger("database.http").log(
         level,  # level - INFO 20, WARNING 30, ERROR 40, CRITICAL 50
         {
             "event": event,
@@ -21,7 +21,7 @@ def task_log(level, event, request_id=None, user_id=None, task_id=None, **extra_
     No Flask, no request, no JWT.
     """
 
-    logging.getLogger().log(
+    logging.getLogger("database.celery").log(
         level,
         {
             "event": event,

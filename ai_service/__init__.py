@@ -7,8 +7,8 @@ from log_logic.ais_logging_config import configure_logging
 def create_ais():
     configure_logging()
 
-    logger = logging.getLogger('werkzeug')
-    logger.setLevel(logging.WARNING)
+    wz_log = logging.getLogger('werkzeug')
+    wz_log.setLevel(logging.WARNING)
 
     app = Flask(__name__)
 

@@ -29,7 +29,7 @@ class RequestIdFilter(logging.Filter):
         return True
 
 def configure_logging(service_name: str = "music"):
-    logger = logging.getLogger()
+    logger = logging.getLogger(service_name)
     logger.setLevel(logging.INFO)
 
     # stdout for normal logs

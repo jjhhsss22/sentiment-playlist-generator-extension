@@ -9,8 +9,8 @@ from websocket.redis_subscriber import start_listener
 def create_app():
     configure_logging() # logging setup
 
-    log = logging.getLogger('werkzeug')  # to suppress HTTP logs from werkzeug
-    log.setLevel(logging.WARNING)
+    wz_log = logging.getLogger('werkzeug')  # to suppress HTTP logs from werkzeug
+    wz_log.setLevel(logging.WARNING)
 
     app = Flask(__name__)  # set up flask environment
 
@@ -19,7 +19,7 @@ def create_app():
         decode_responses=True
     )
 
-    socketio.init_app(app)
+    socketio.init_app(app)  # associate app with socketio instance
     start_listener()  # start redis subscriber thread (1 per gateway instance)
 
     from api.api_profile import api_profile_bp

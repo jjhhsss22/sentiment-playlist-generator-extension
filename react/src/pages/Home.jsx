@@ -54,7 +54,7 @@ export default function Home() {
     setSongs(result.songs_playlist || []);
 
     showMessage(setSuccess, "Playlist generated successfully!");
-  }, [result]);
+  }, [result]);  // if result value changes (which means data returned from backend), set states.
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

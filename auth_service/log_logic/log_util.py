@@ -1,8 +1,9 @@
-from flask import request, current_app, g
+from flask import request, g
+import logging
 
 def log(level, event, **extra_kwargs):
 
-    current_app.logger.log(
+    logging.getLogger("auth.http").log(
         level,  # level - INFO 20, WARNING 30, ERROR 40, CRITICAL 50
         {
             "event": event,
