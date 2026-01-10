@@ -41,14 +41,27 @@ redis_cache = redis.Redis.from_url(CACHE_REDIS_URL, decode_responses=True)
 @celery.task(name="gateway.full_playlist_generation_pipeline", bind=True)
 def generate_playlist_pipeline(self, text, desired_emotion, user_id, request_id):
 
-    pipeline_data = {
-        "text": text,
-        "desired_emotion": desired_emotion,
-        "user_id": user_id,
-        "request_id": request_id,
-    }
-
     try:
+        self.update_state(
+            state="PROGRESS",
+            meta={"step": "Starting playlist generation..."},  # for internal introspection / debugging
+        )
+
+        redis_cache.publish(
+            "playlist:progress",
+            json.dumps({
+                "request_id": request_id,
+                "step": "Starting generation...",
+                "task": self.name,
+            })
+        )  # progress ui
+
+        pipeline_data = {
+            "text": text,
+            "desired_emotion": desired_emotion,
+            "user_id": user_id,
+            "request_id": request_id,
+        }
 
         workflow = chain(
             celery.signature("ai.predict_emotion", args=(pipeline_data,)),
@@ -57,9 +70,11 @@ def generate_playlist_pipeline(self, text, desired_emotion, user_id, request_id)
         )  # chain = output of previous celery task --> input of next celery task
 
         result = workflow.apply_async()
+
         return {
             "id": result.parent.id if result.parent else result.id
             }
+
     except Exception as e:
         task_log(
             50,
@@ -95,7 +110,6 @@ def finalise_playlist(self, pipeline_data):
             "db.save_new_playlist",
             args=(pipeline_data,),
         ).apply_async()  # fire-and-forget db save for faster response to client (non-blocking)
-
 
         redis_cache.publish(  # for subscriber thread for websocket
             "playlist:completed",

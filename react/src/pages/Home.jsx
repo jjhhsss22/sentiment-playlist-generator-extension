@@ -5,6 +5,7 @@ import { showMessage } from "../utils/showMessage.jsx";
 import { handleLogout } from "../utils/auth.jsx";
 import { generateRequestId } from "../utils/generateRequestId.jsx";
 import { getPlaylistTask } from "../socket/getPlaylistTask.jsx";
+import { getPlaylistProgress } from "../socket/getPlaylistProgress.jsx";
 
 export default function Home() {
 
@@ -42,7 +43,17 @@ export default function Home() {
     sessionStorage.getItem("last_request_id")  // get Idempotency key just in case of a repeated request
   );
 
-  const { status, result } = getPlaylistTask(requestId);  // listener will run when requestId exists
+  const progressSteps = getPlaylistProgress(requestId);
+
+  const TOTAL_STEPS = 3;  // backend will send 3 progress step strings
+
+  const progressPercent = Math.min(
+    Math.round((progressSteps.length / TOTAL_STEPS) * 100),
+    100
+  );  // calculate progress percentage
+
+
+  const { status, result } = getPlaylistTask(requestId);  // listeners will run when requestId exists
 
   useEffect(() => {
     if (!result) return;
@@ -81,6 +92,7 @@ export default function Home() {
 
     const request_id = generateRequestId();
     sessionStorage.setItem("last_request_id", request_id);
+    setRequestId(request_id);
 
     try {
       const { data } = await api.post("/home",
@@ -195,6 +207,58 @@ export default function Home() {
                     <span className="text-red-500 text-sm">{errors.text}</span>
                   )}
                 </div>
+
+                {requestId?.length > 0 && (  // progress bar will only show up after user submits a request
+                  <div className="mt-6 space-y-3">
+
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>Creating personalised playlist</span>
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="w-full bg-neutral-quaternary rounded-full overflow-hidden">
+                      <div
+                        className="
+                          bg-brand
+                          text-xs
+                          font-medium
+                          text-white
+                          text-center
+                          p-0.5
+                          leading-none
+                          rounded-full
+                          h-4
+                          flex
+                          items-center
+                          justify-center
+                          transition-all
+                          duration-700
+                          ease-out
+                        "
+                        style={{ width: `${progressPercent}%` }}
+                      >
+                        {progressPercent}%
+                      </div>
+                    </div>
+
+                    {/* Step list */}
+                    <ul className="space-y-1 text-sm text-gray-700">
+                      {progressSteps.map((step, idx) => (
+                        <li
+                          key={idx}
+                          className={`flex items-center gap-2 ${
+                            idx === progressSteps.length - 1
+                              ? "font-semibold text-brand"
+                              : ""
+                          }`}
+                        >
+                          {step}
+                        </li>
+                      ))}
+                    </ul>
+
+                  </div>
+                )}
 
                 {/* Emotion Options */}
                 <div>

@@ -20,7 +20,7 @@ const root = createRoot(document.getElementById("root"));
 root.render(
   <StrictMode>
     <Router>
-      <NavigateWrapper>
+      <NavigateWrapper>  // move wrapper to wrap whole app if multiple pages need a socket connection
         <Routes>
           <Route path="/" element={<Login />} />
 

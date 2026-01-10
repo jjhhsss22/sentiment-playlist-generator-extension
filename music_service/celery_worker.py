@@ -1,17 +1,21 @@
 from celery import Celery
+import redis
+import json
 from celery.exceptions import Ignore
 from requests.exceptions import Timeout, ConnectionError
+
 from log_logic.log_util import task_log
 
 # sys.path.append("/app")  # for docker
 
 # redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
-redis_url = "redis://localhost:6379/0"
+CELERY_REDIS_URL = "redis://localhost:6379/0"
+CACHE_REDIS_URL = "redis://localhost:6379/1"
 
 celery = Celery(
     "music",
-    broker=redis_url,
-    backend=redis_url,
+    broker=CELERY_REDIS_URL,
+    backend=CELERY_REDIS_URL,
 )
 
 celery.conf.task_routes = {
@@ -26,6 +30,8 @@ celery.conf.update(
     enable_utc=True,
 )
 
+redis_cache = redis.Redis.from_url(CACHE_REDIS_URL, decode_responses=True)
+
 @celery.task(
     name="music.generate_playlist",
     bind=True,
@@ -35,12 +41,22 @@ celery.conf.update(
     retry_jitter=True,
 )
 def generate_playlist(self, pipeline_data):
-    self.update_state(
-        state="PROGRESS",
-        meta={"step": "Generating personalised playlist..."}
-    )
 
     try:
+        self.update_state(
+            state="PROGRESS",
+            meta={"step": "Generating personalised playlist..."}
+        )
+
+        redis_cache.publish(
+            "playlist:progress",
+            json.dumps({
+                "request_id": pipeline_data["request_id"],
+                "step": "Generating personalised playlist...",
+                "task": self.name,
+            })
+        )
+
         from music_logic.music_module import generate_playlist_pipeline
 
         playlist = generate_playlist_pipeline(

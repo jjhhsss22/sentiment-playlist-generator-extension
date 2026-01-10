@@ -2,6 +2,8 @@ from celery import Celery
 from celery.exceptions import Ignore
 import os
 import sys
+import redis
+import json
 import tensorflow as tf
 from tensorflow.errors import InvalidArgumentError
 from requests.exceptions import Timeout, ConnectionError
@@ -11,12 +13,13 @@ from log_logic.log_util import task_log
 
 sys.path.append("/app")  # for docker
 
-redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+CELERY_REDIS_URL = os.environ.get("CELERY_REDIS_URL", "redis://localhost:6379/0")
+CACHE_REDIS_URL = "redis://localhost:6379/1"
 
 celery = Celery(
     "ai",
-    broker=redis_url,
-    backend=redis_url,
+    broker=CELERY_REDIS_URL,
+    backend=CELERY_REDIS_URL,
 )
 
 celery.conf.task_routes = {
@@ -30,6 +33,8 @@ celery.conf.update(
     timezone="Asia/Seoul",
     enable_utc=True,
 )
+
+redis_cache = redis.Redis.from_url(CACHE_REDIS_URL, decode_responses=True)
 
 # Load model once at import time (relative to the CWD)
 sentiment_model = tf.keras.models.load_model("model/sentiment_model3.keras", compile=False)
@@ -50,12 +55,21 @@ sentiment_model.compile(optimizer="adam",
 )
 def run_prediction_task(self, pipeline_data):
 
-    self.update_state(
-        state="PROGRESS",
-        meta={"step": "Generating emotion prediction..."},
-    )
-
     try:
+        self.update_state(
+            state="PROGRESS",
+            meta={"step": "Generating emotion prediction..."},
+        )
+
+        redis_cache.publish(
+            "playlist:progress",
+            json.dumps({
+                "request_id": pipeline_data["request_id"],
+                "step": "Generating emotion prediction...",
+                "task": self.name,
+            })
+        )
+
         from deployment.ai_module import run_prediction_pipeline
         result = run_prediction_pipeline(
             sentiment_model,

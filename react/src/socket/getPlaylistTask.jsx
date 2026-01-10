@@ -20,10 +20,10 @@ export function getPlaylistTask(requestId) {
       }
     };
 
-    socket.on("playlist_update", handleUpdate);
+    socket.on("playlist_done", handleUpdate);
 
     return () => {
-      socket.off("playlist_update", handleUpdate);
+      socket.off("playlist_done", handleUpdate);
     };
   }, [requestId]);
 

@@ -8,7 +8,7 @@ from log_logic.log_util import redis_log
 
 REDIS_CLIENT = redis.Redis.from_url(
     "redis://localhost:6379/1",
-    decode_responses=True
+    decode_responses=True  # message sent as str not bytes
 )
 
 def listen_for_results():
@@ -26,13 +26,12 @@ def listen_for_results():
             """
 
             pubsub = REDIS_CLIENT.pubsub(ignore_subscribe_messages=True)
-            pubsub.subscribe("playlist:completed")
+            pubsub.subscribe("playlist:completed", "playlist:progress")
 
             for message in pubsub.listen():  # blocks/sleeps until a message arrives
                 try:
                     payload = json.loads(message["data"])
                     request_id = payload.get("request_id")
-                    result = payload.get("result")
 
                     if not request_id or not result:
                         redis_log(
@@ -42,11 +41,22 @@ def listen_for_results():
                         )
                         continue
 
-                    socketio.emit(
-                        "playlist_done",
-                        result,
-                        room=request_id
-                    )
+                    if message["channel"] == "playlist:progress":
+                        step = payload.get("step")
+
+                        socketio.emit(
+                            "playlist_progress",
+                            step,
+                            room=request_id,
+                        )
+                    elif message["channel"] == "playlist:completed":
+                        result = payload.get("result")
+
+                        socketio.emit(
+                            "playlist_done",
+                            result,
+                            room=request_id,
+                        )
 
                 except json.JSONDecodeError:
                     redis_log(
