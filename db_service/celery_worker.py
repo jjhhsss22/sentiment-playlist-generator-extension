@@ -1,8 +1,10 @@
 from celery import Celery, signature
 from celery.exceptions import Ignore
 from sqlalchemy.exc import IntegrityError
+import time
 import os
 import sys
+
 from log_logic.log_util import task_log
 
 # sys.path.append("/app")  # for docker
@@ -42,12 +44,14 @@ celery.conf.update(
 )
 def save_new_playlist(self, pipeline_data):
 
-    self.update_state(
-        state="PROGRESS",
-        meta={"step": "Saving playlist..."}
-    )
-
     try:
+        start = time.monotonic()
+
+        self.update_state(
+            state="PROGRESS",
+            meta={"step": "Saving playlist..."}
+        )
+
         from db_structure.db_module import create_playlist, save
 
         playlist = create_playlist(
@@ -61,6 +65,17 @@ def save_new_playlist(self, pipeline_data):
 
         save(playlist)
 
+        duration_ms = int((time.monotonic() - start) * 1000)
+
+        task_log(
+            20,
+            "playlist_db_save.completed",
+            request_id=pipeline_data["request_id"],
+            user_id=pipeline_data["user_id"],
+            task_id=self.request.id,
+            duration_ms=duration_ms,
+        )
+
     except IntegrityError as e:
         task_log(
             20,
@@ -72,12 +87,11 @@ def save_new_playlist(self, pipeline_data):
         )
         raise Ignore()
 
-
     except Exception as e:
         is_final_attempt = self.request.retries >= self.max_retries
 
         task_log(
-            40 if is_final_attempt else 50,
+            40 if not is_final_attempt else 50,
             "db.save_failed",
             request_id=pipeline_data["request_id"],
             user_id=pipeline_data["user_id"],

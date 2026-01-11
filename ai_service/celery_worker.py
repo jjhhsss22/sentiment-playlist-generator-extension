@@ -4,6 +4,7 @@ import os
 import sys
 import redis
 import json
+import time
 import tensorflow as tf
 from tensorflow.errors import InvalidArgumentError
 from requests.exceptions import Timeout, ConnectionError
@@ -56,6 +57,8 @@ sentiment_model.compile(optimizer="adam",
 def run_prediction_task(self, pipeline_data):
 
     try:
+        start = time.monotonic()
+
         self.update_state(
             state="PROGRESS",
             meta={"step": "Generating emotion prediction..."},
@@ -80,6 +83,18 @@ def run_prediction_task(self, pipeline_data):
         pipeline_data.update({
             "ai_result": result,
         })
+
+        duration_ms = int((time.monotonic() - start) * 1000)
+
+        task_log(
+            20,
+            "ai_emotion_prediction.completed",
+            request_id=pipeline_data["request_id"],
+            user_id=pipeline_data["user_id"],
+            task_id=self.request.id,
+            predicted_emotions=result["predicted_emotions"],
+            duration_ms=duration_ms,
+        )
 
         return pipeline_data
 

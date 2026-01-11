@@ -1,6 +1,7 @@
 from celery import Celery
 import redis
 import json
+import time
 from celery.exceptions import Ignore
 from requests.exceptions import Timeout, ConnectionError
 
@@ -43,6 +44,8 @@ redis_cache = redis.Redis.from_url(CACHE_REDIS_URL, decode_responses=True)
 def generate_playlist(self, pipeline_data):
 
     try:
+        start = time.monotonic()
+
         self.update_state(
             state="PROGRESS",
             meta={"step": "Generating personalised playlist..."}
@@ -67,6 +70,18 @@ def generate_playlist(self, pipeline_data):
         pipeline_data.update({
             "playlist_result": playlist,
         })
+
+        duration_ms = int((time.monotonic() - start) * 1000)
+
+        task_log(
+            20,
+            "music_playlist_generation.completed",
+            request_id=pipeline_data["request_id"],
+            user_id=pipeline_data["user_id"],
+            task_id=self.request.id,
+            playlist_length=len(playlist["list"]),
+            duration_ms=duration_ms,
+        )
 
         return pipeline_data
 

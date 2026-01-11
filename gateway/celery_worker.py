@@ -2,10 +2,11 @@ from celery import Celery, signature
 from celery import chain
 import redis
 import json
+import time
 import os
 import sys
 
-from log_logic.log_util import task_log  # LOGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+from log_logic.log_util import task_log
 
 # sys.path.append("/app")  # for docker
 
@@ -90,6 +91,8 @@ def generate_playlist_pipeline(self, text, desired_emotion, user_id, request_id)
 def finalise_playlist(self, pipeline_data):
 
     try:
+        start = time.monotonic()
+
         final_result = {
             "success": True,
             "message": "Playlist generated successfully!",
@@ -119,6 +122,8 @@ def finalise_playlist(self, pipeline_data):
             })
         )
 
+        duration_ms = int((time.monotonic() - start) * 1000)
+
         task_log(
             20,
             "playlist_pipeline.completed",
@@ -126,6 +131,7 @@ def finalise_playlist(self, pipeline_data):
             user_id=pipeline_data["user_id"],
             task_id=self.request.id,
             playlist_size=len(final_result["songs_playlist"]),
+            duration_ms=duration_ms,
         )
 
         return final_result
