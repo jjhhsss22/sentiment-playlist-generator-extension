@@ -92,19 +92,19 @@ def save_new_playlist(self, pipeline_data):
 
         task_log(
             40 if not is_final_attempt else 50,
-            "db.save_failed",
+            "db.save_failed.retry" if not is_final_attempt else "db.save_failed.dlq",
             request_id=pipeline_data["request_id"],
             user_id=pipeline_data["user_id"],
             task_id=self.request.id,
             retry=self.request.retries,
             max_retries=self.max_retries,
-            error=f"{e.__class__.__name__}: {str(e)}",
+            error=f"{e.__class__.__name__}: {str(e) or 'no message'}",
         )
 
         if is_final_attempt:
             signature(
                 "db.dlq.save_failed_playlist",
-                args=(pipeline_data, f"{e.__class__.__name__}: {str(e)}"),
+                args=(pipeline_data, f"{e.__class__.__name__}: {str(e) or 'no message'}"),
             ).apply_async()
 
         raise
@@ -112,4 +112,8 @@ def save_new_playlist(self, pipeline_data):
 
 @celery.task(name="db.dlq.save_failed_playlist")
 def handle_failed_playlist(pipeline_data, error_message):
-    pass  # can save failed playlist data in another table for example and retry
+
+    # final retry for table save
+    # if failed add whole payload to failed playlist table (need to create new table
+
+    pass

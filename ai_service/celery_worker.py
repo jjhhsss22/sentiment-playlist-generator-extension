@@ -88,7 +88,7 @@ def run_prediction_task(self, pipeline_data):
 
         task_log(
             20,
-            "ai_emotion_prediction.completed",
+            "ai.emotion_prediction.completed",
             request_id=pipeline_data["request_id"],
             user_id=pipeline_data["user_id"],
             task_id=self.request.id,
@@ -109,7 +109,7 @@ def run_prediction_task(self, pipeline_data):
     except (KeyError, TypeError, JSONDecodeError) as e:
         task_log(
             40,
-            "pipeline_data_error",
+            "ai.pipeline_data_error.failure",
             request_id=pipeline_data.get("request_id"),
             user_id=pipeline_data.get("user_id"),
             task_id=self.request.id,
@@ -120,7 +120,7 @@ def run_prediction_task(self, pipeline_data):
     except (Timeout, ConnectionError) as e:
         task_log(
             40,
-            "infra_failure_retrying",
+            "ai.emotion_prediction.retry",
             request_id=pipeline_data["request_id"],
             user_id=pipeline_data["user_id"],
             task_id=self.request.id,
@@ -129,11 +129,10 @@ def run_prediction_task(self, pipeline_data):
         raise
 
     except Exception as e:
-        is_final_attempt = self.request.retries >= self.max_retries
 
         task_log(
-            40 if not is_final_attempt else 50,
-            "unhandled_exception",
+            50,
+            "ai.emotion_prediction.failure",
             request_id=pipeline_data["request_id"],
             user_id=pipeline_data["user_id"],
             task_id=self.request.id,

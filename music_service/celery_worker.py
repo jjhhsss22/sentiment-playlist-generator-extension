@@ -75,7 +75,7 @@ def generate_playlist(self, pipeline_data):
 
         task_log(
             20,
-            "music_playlist_generation.completed",
+            "music.playlist_generation.completed",
             request_id=pipeline_data["request_id"],
             user_id=pipeline_data["user_id"],
             task_id=self.request.id,
@@ -88,7 +88,7 @@ def generate_playlist(self, pipeline_data):
     except (Timeout, ConnectionError) as e:
         task_log(
             30,
-            "music.retrying",
+            "music.playlist_generation.retry",
             request_id=pipeline_data["request_id"],
             user_id=pipeline_data["user_id"],
             task_id=self.request.id,
@@ -97,11 +97,9 @@ def generate_playlist(self, pipeline_data):
         raise
 
     except Exception as e:
-        is_final_attempt = self.request.retries >= self.max_retries
-
         task_log(
-            40 if not is_final_attempt else 50,
-            "music.permanent_failure",
+            50,
+            "music.playlist_generation.failure",
             request_id=pipeline_data["request_id"],
             user_id=pipeline_data["user_id"],
             task_id=self.request.id,

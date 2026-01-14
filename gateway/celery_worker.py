@@ -79,7 +79,7 @@ def generate_playlist_pipeline(self, text, desired_emotion, user_id, request_id)
     except Exception as e:
         task_log(
             50,
-            "gateway.pipeline.dispatch_failed",
+            "gateway.playlist_pipeline_dispatch.failure",
             request_id=request_id,
             user_id=user_id,
             task_id=self.request.id,
@@ -126,7 +126,7 @@ def finalise_playlist(self, pipeline_data):
 
         task_log(
             20,
-            "playlist_pipeline.completed",
+            "gateway.playlist_pipeline.completed",
             request_id=pipeline_data["request_id"],
             user_id=pipeline_data["user_id"],
             task_id=self.request.id,
@@ -139,7 +139,7 @@ def finalise_playlist(self, pipeline_data):
     except Exception as e:
         task_log(
             50,
-            "gateway.pipeline.finalise_failed",
+            "gateway.playlist_pipeline.failure",
             request_id=pipeline_data["request_id"],
             user_id=pipeline_data["user_id"],
             task_id=self.request.id,
