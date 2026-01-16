@@ -2,20 +2,23 @@ from celery import Celery, signature
 from celery.exceptions import Ignore
 from sqlalchemy.exc import IntegrityError
 import time
+import redis
 import os
 import sys
 
 from log_logic.log_util import task_log
+from dlq_logic.dlq_push_util import push_to_dlq
 
 # sys.path.append("/app")  # for docker
 
 # redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
-redis_url = "redis://localhost:6379/0"
+CELERY_REDIS_URL = "redis://localhost:6379/0"
+DLQ_REDIS_URL = "redis://localhost:6379/2"
 
 celery = Celery(
     "db",
-    broker=redis_url,
-    backend=redis_url,
+    broker=CELERY_REDIS_URL,
+    backend=CELERY_REDIS_URL,
 )
 
 celery.conf.task_routes = {
@@ -31,7 +34,7 @@ celery.conf.update(
     enable_utc=True,
 )
 
-
+redis_dlq = redis.Redis.from_url(DLQ_REDIS_URL, decode_responses=True)
 
 @celery.task(
     name="db.save_new_playlist",
@@ -114,6 +117,15 @@ def save_new_playlist(self, pipeline_data):
 def handle_failed_playlist(pipeline_data, error_message):
 
     # final retry for table save
-    # if failed add whole payload to failed playlist table (need to create new table
+    # if failed add whole payload to failed playlist table (need to create new table)
+    # failed_playlists
+    # ---------------
+    # id
+    # request_id
+    # user_id
+    # payload_json
+    # error_message
+    # created_at
+    # last_retry_at
 
     pass

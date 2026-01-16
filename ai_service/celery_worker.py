@@ -11,11 +11,13 @@ from requests.exceptions import Timeout, ConnectionError
 from json import JSONDecodeError
 
 from log_logic.log_util import task_log
+from dlq_logic.dlq_push_util import push_to_dlq
 
 sys.path.append("/app")  # for docker
 
 CELERY_REDIS_URL = os.environ.get("CELERY_REDIS_URL", "redis://localhost:6379/0")
 CACHE_REDIS_URL = "redis://localhost:6379/1"
+DLQ_REDIS_URL = "redis://localhost:6379/2"
 
 celery = Celery(
     "ai",
@@ -36,6 +38,7 @@ celery.conf.update(
 )
 
 redis_cache = redis.Redis.from_url(CACHE_REDIS_URL, decode_responses=True)
+redis_dlq = redis.Redis.from_url(DLQ_REDIS_URL, decode_responses=True)
 
 # Load model once at import time (relative to the CWD)
 sentiment_model = tf.keras.models.load_model("model/sentiment_model3.keras", compile=False)
@@ -106,18 +109,18 @@ def run_prediction_task(self, pipeline_data):
         )
         raise Ignore()
 
-    except (KeyError, TypeError, JSONDecodeError) as e:
-        task_log(
-            40,
-            "ai.pipeline_data_error.failure",
-            request_id=pipeline_data.get("request_id"),
-            user_id=pipeline_data.get("user_id"),
-            task_id=self.request.id,
-            error = f"{e.__class__.__name__}: {str(e) or 'no message'}",
-        )
-        raise
-
     except (Timeout, ConnectionError) as e:
+        is_final_attempt = self.request.retries >= self.max_retries
+
+        if is_final_attempt:
+            push_to_dlq(
+                redis_dlq=redis_dlq,
+                task=self,
+                request_id=pipeline_data["request_id"],
+                user_id=pipeline_data["user_id"],
+                exc=e,
+            )
+
         task_log(
             40,
             "ai.emotion_prediction.retry",
@@ -128,7 +131,35 @@ def run_prediction_task(self, pipeline_data):
         )
         raise
 
+    except (KeyError, TypeError, JSONDecodeError) as e:
+        push_to_dlq(
+            redis_dlq=redis_dlq,
+            task=self,
+            request_id=pipeline_data.get("request_id"),
+            user_id=pipeline_data.get("user_id"),
+            payload=pipeline_data,
+            exc=e,
+        )
+
+        task_log(
+            40,
+            "ai.pipeline_data_error.failure",
+            request_id=pipeline_data.get("request_id"),
+            user_id=pipeline_data.get("user_id"),
+            task_id=self.request.id,
+            error = f"{e.__class__.__name__}: {str(e) or 'no message'}",
+        )
+        raise Ignore()
+
     except Exception as e:
+        push_to_dlq(
+            redis_dlq=redis_dlq,
+            task=self,
+            request_id=pipeline_data.get("request_id"),
+            user_id=pipeline_data.get("user_id"),
+            payload=pipeline_data,
+            exc=e,
+        )
 
         task_log(
             50,

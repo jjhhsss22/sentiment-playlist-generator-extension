@@ -6,12 +6,14 @@ from celery.exceptions import Ignore
 from requests.exceptions import Timeout, ConnectionError
 
 from log_logic.log_util import task_log
+from dlq_logic.dlq_push_util import push_to_dlq
 
 # sys.path.append("/app")  # for docker
 
 # redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 CELERY_REDIS_URL = "redis://localhost:6379/0"
 CACHE_REDIS_URL = "redis://localhost:6379/1"
+DLQ_REDIS_URL = "redis://localhost:6379/2"
 
 celery = Celery(
     "music",
@@ -32,6 +34,7 @@ celery.conf.update(
 )
 
 redis_cache = redis.Redis.from_url(CACHE_REDIS_URL, decode_responses=True)
+redis_dlq = redis.Redis.from_url(DLQ_REDIS_URL, decode_responses=True)
 
 @celery.task(
     name="music.generate_playlist",
@@ -86,6 +89,17 @@ def generate_playlist(self, pipeline_data):
         return pipeline_data
 
     except (Timeout, ConnectionError) as e:
+        is_final_attempt = self.request.retries >= self.max_retries
+
+        if is_final_attempt:
+            push_to_dlq(
+                redis_dlq=redis_dlq,
+                task=self,
+                request_id=pipeline_data["request_id"],
+                user_id=pipeline_data["user_id"],
+                exc=e,
+            )
+
         task_log(
             30,
             "music.playlist_generation.retry",
@@ -97,6 +111,14 @@ def generate_playlist(self, pipeline_data):
         raise
 
     except Exception as e:
+        push_to_dlq(
+            redis_dlq=redis_dlq,
+            task=self,
+            request_id=pipeline_data.get("request_id"),
+            user_id=pipeline_data.get("user_id"),
+            exc=e,
+        )
+
         task_log(
             50,
             "music.playlist_generation.failure",
@@ -105,5 +127,6 @@ def generate_playlist(self, pipeline_data):
             task_id=self.request.id,
             error = f"{e.__class__.__name__}: {str(e) or 'no message'}",
         )
+
         raise Ignore()
 

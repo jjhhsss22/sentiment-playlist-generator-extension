@@ -7,12 +7,14 @@ import os
 import sys
 
 from log_logic.log_util import task_log
+from dlq_logic.dlq_push_util import push_to_dlq
 
 # sys.path.append("/app")  # for docker
 
 # redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 CELERY_REDIS_URL = "redis://localhost:6379/0"
 CACHE_REDIS_URL = "redis://localhost:6379/1"  # in ec2 - redis://redis.internal:6379/1
+DLQ_REDIS_URL = "redis://localhost:6379/2"
 
 celery = Celery(
     "gateway",
@@ -37,7 +39,7 @@ celery.conf.update(
 
 
 redis_cache = redis.Redis.from_url(CACHE_REDIS_URL, decode_responses=True)
-
+redis_dlq = redis.Redis.from_url(DLQ_REDIS_URL, decode_responses=True)
 
 @celery.task(name="gateway.full_playlist_generation_pipeline", bind=True)
 def generate_playlist_pipeline(self, text, desired_emotion, user_id, request_id):
@@ -77,6 +79,18 @@ def generate_playlist_pipeline(self, text, desired_emotion, user_id, request_id)
             }
 
     except Exception as e:
+        push_to_dlq(
+            redis_dlq=redis_dlq,
+            task=self,
+            request_id=request_id,
+            user_id=user_id,
+            payload={
+                "text": text,
+                "desired_emotion": desired_emotion,
+            },
+            exc=e,
+        )
+
         task_log(
             50,
             "gateway.playlist_pipeline_dispatch.failure",
@@ -137,6 +151,17 @@ def finalise_playlist(self, pipeline_data):
         return final_result
 
     except Exception as e:
+        push_to_dlq(
+            redis_dlq=redis_dlq,
+            task=self,
+            request_id=pipeline_data["request_id"],
+            user_id=pipeline_data.get("user_id"),
+            payload={
+                "pipeline_data_keys": list(pipeline_data.keys()),  # no need for full payload for aiops
+            },
+            exc=e,
+        )
+
         task_log(
             50,
             "gateway.playlist_pipeline.failure",
