@@ -6,7 +6,8 @@ from celery.exceptions import Ignore
 from requests.exceptions import Timeout, ConnectionError
 
 from log_logic.log_util import task_log
-from dlq_logic.dlq_push_util import push_to_dlq
+from observability.dlq_push_util import push_to_dlq
+from observability.metrics import record_latency, record_success, record_error, record_retry
 
 # sys.path.append("/app")  # for docker
 
@@ -45,10 +46,9 @@ redis_dlq = redis.Redis.from_url(DLQ_REDIS_URL, decode_responses=True)
     retry_jitter=True,
 )
 def generate_playlist(self, pipeline_data):
+    start = time.monotonic()
 
     try:
-        start = time.monotonic()
-
         self.update_state(
             state="PROGRESS",
             meta={"step": "Generating personalised playlist..."}
@@ -75,7 +75,7 @@ def generate_playlist(self, pipeline_data):
         })
 
         duration_ms = int((time.monotonic() - start) * 1000)
-
+        record_success(self.name)
         task_log(
             20,
             "music.playlist_generation.completed",
@@ -89,7 +89,7 @@ def generate_playlist(self, pipeline_data):
         return pipeline_data
 
     except (Timeout, ConnectionError) as e:
-        is_final_attempt = self.request.retries >= self.max_retries
+        is_final_attempt = self.request.retries + 1 >= self.max_retries
 
         if is_final_attempt:
             push_to_dlq(
@@ -100,6 +100,9 @@ def generate_playlist(self, pipeline_data):
                 exc=e,
             )
 
+            record_error(self.name)
+
+        record_retry(self.name)
         task_log(
             30,
             "music.playlist_generation.retry",
@@ -119,6 +122,7 @@ def generate_playlist(self, pipeline_data):
             exc=e,
         )
 
+        record_error(self.name)
         task_log(
             50,
             "music.playlist_generation.failure",
@@ -129,4 +133,8 @@ def generate_playlist(self, pipeline_data):
         )
 
         raise Ignore()
+
+    finally:
+        duration_ms = int((time.monotonic() - start) * 1000)
+        record_latency(self.name, duration_ms)
 

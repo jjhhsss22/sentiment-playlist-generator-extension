@@ -7,7 +7,7 @@ import os
 import sys
 
 from log_logic.log_util import task_log
-from dlq_logic.dlq_push_util import push_to_dlq
+from observability.metrics import record_latency, record_success, record_error, record_retry
 
 # sys.path.append("/app")  # for docker
 
@@ -46,10 +46,9 @@ redis_dlq = redis.Redis.from_url(DLQ_REDIS_URL, decode_responses=True)
     retry_exclude=(IntegrityError,),
 )
 def save_new_playlist(self, pipeline_data):
+    start = time.monotonic()
 
     try:
-        start = time.monotonic()
-
         self.update_state(
             state="PROGRESS",
             meta={"step": "Saving playlist..."}
@@ -69,7 +68,7 @@ def save_new_playlist(self, pipeline_data):
         save(playlist)
 
         duration_ms = int((time.monotonic() - start) * 1000)
-
+        record_success(self.name)
         task_log(
             20,
             "playlist_db_save.completed",
@@ -80,6 +79,7 @@ def save_new_playlist(self, pipeline_data):
         )
 
     except IntegrityError as e:
+        record_error(self.name)
         task_log(
             20,
             "db.playlist_already_exists",
@@ -91,8 +91,17 @@ def save_new_playlist(self, pipeline_data):
         raise Ignore()
 
     except Exception as e:
-        is_final_attempt = self.request.retries >= self.max_retries
+        is_final_attempt = self.request.retries + 1 >= self.max_retries
 
+        if is_final_attempt:
+            signature(
+                "db.dlq.save_failed_playlist",
+                args=(pipeline_data, f"{e.__class__.__name__}: {str(e) or 'no message'}"),
+            ).apply_async()
+
+            record_error(self.name)
+
+        record_retry(self.name)
         task_log(
             40 if not is_final_attempt else 50,
             "db.save_failed.retry" if not is_final_attempt else "db.save_failed.dlq",
@@ -104,14 +113,11 @@ def save_new_playlist(self, pipeline_data):
             error=f"{e.__class__.__name__}: {str(e) or 'no message'}",
         )
 
-        if is_final_attempt:
-            signature(
-                "db.dlq.save_failed_playlist",
-                args=(pipeline_data, f"{e.__class__.__name__}: {str(e) or 'no message'}"),
-            ).apply_async()
-
         raise
 
+    finally:
+        duration_ms = int((time.monotonic() - start) * 1000)
+        record_latency(self.name, duration_ms)
 
 @celery.task(name="db.dlq.save_failed_playlist")
 def handle_failed_playlist(pipeline_data, error_message):

@@ -7,7 +7,8 @@ import os
 import sys
 
 from log_logic.log_util import task_log
-from dlq_logic.dlq_push_util import push_to_dlq
+from observability.dlq_push_util import push_to_dlq
+from observability.metrics import record_latency, record_success, record_error
 
 # sys.path.append("/app")  # for docker
 
@@ -43,6 +44,7 @@ redis_dlq = redis.Redis.from_url(DLQ_REDIS_URL, decode_responses=True)
 
 @celery.task(name="gateway.full_playlist_generation_pipeline", bind=True)
 def generate_playlist_pipeline(self, text, desired_emotion, user_id, request_id):
+    start = time.monotonic()
 
     try:
         self.update_state(
@@ -74,6 +76,17 @@ def generate_playlist_pipeline(self, text, desired_emotion, user_id, request_id)
 
         result = workflow.apply_async()
 
+        duration_ms = int((time.monotonic() - start) * 1000)
+        record_success(self.name)  # for metrics
+        task_log(  # for structured logging
+            20,
+            "gateway.playlist_pipeline_dispatch.completed",
+            request_id=request_id,
+            user_id=user_id,
+            task_id=self.request.id,
+            duration_ms=duration_ms,
+        )
+
         return {
             "id": result.parent.id if result.parent else result.id
             }
@@ -91,6 +104,8 @@ def generate_playlist_pipeline(self, text, desired_emotion, user_id, request_id)
             exc=e,
         )
 
+        record_error(self.name)
+
         task_log(
             50,
             "gateway.playlist_pipeline_dispatch.failure",
@@ -101,12 +116,15 @@ def generate_playlist_pipeline(self, text, desired_emotion, user_id, request_id)
         )
         raise
 
+    finally:
+        duration_ms = int((time.monotonic() - start) * 1000)
+        record_latency(self.name, duration_ms)
+
 @celery.task(name="gateway.finalise_playlist", bind=True)
 def finalise_playlist(self, pipeline_data):
+    start = time.monotonic()
 
     try:
-        start = time.monotonic()
-
         final_result = {
             "success": True,
             "message": "Playlist generated successfully!",
@@ -138,6 +156,7 @@ def finalise_playlist(self, pipeline_data):
 
         duration_ms = int((time.monotonic() - start) * 1000)
 
+        record_success(self.name)
         task_log(
             20,
             "gateway.playlist_pipeline.completed",
@@ -162,6 +181,7 @@ def finalise_playlist(self, pipeline_data):
             exc=e,
         )
 
+        record_error(self.name)
         task_log(
             50,
             "gateway.playlist_pipeline.failure",
@@ -171,3 +191,7 @@ def finalise_playlist(self, pipeline_data):
             error = f"{e.__class__.__name__}: {str(e) or 'no message'}",
         )
         raise
+
+    finally:
+        duration_ms = int((time.monotonic() - start) * 1000)
+        record_latency(self.name, duration_ms)

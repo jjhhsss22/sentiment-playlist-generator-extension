@@ -11,7 +11,9 @@ from requests.exceptions import Timeout, ConnectionError
 from json import JSONDecodeError
 
 from log_logic.log_util import task_log
-from dlq_logic.dlq_push_util import push_to_dlq
+from observability.dlq_push_util import push_to_dlq
+from observability.metrics import record_latency, record_success, record_error, record_retry
+
 
 sys.path.append("/app")  # for docker
 
@@ -58,10 +60,9 @@ sentiment_model.compile(optimizer="adam",
     retry_jitter=True,  # retries randomly staggered
 )
 def run_prediction_task(self, pipeline_data):
+    start = time.monotonic()
 
     try:
-        start = time.monotonic()
-
         self.update_state(
             state="PROGRESS",
             meta={"step": "Generating emotion prediction..."},
@@ -88,7 +89,7 @@ def run_prediction_task(self, pipeline_data):
         })
 
         duration_ms = int((time.monotonic() - start) * 1000)
-
+        record_success(self.name)
         task_log(
             20,
             "ai.emotion_prediction.completed",
@@ -107,10 +108,14 @@ def run_prediction_task(self, pipeline_data):
             meta={"success": False,
                   "message": "Invalid input. Please type in full sentences"}
         )
+
+        record_error(self.name)
+
         raise Ignore()
 
     except (Timeout, ConnectionError) as e:
-        is_final_attempt = self.request.retries >= self.max_retries
+        # retries only increments after the retry decision so need to +1
+        is_final_attempt = self.request.retries + 1 >= self.max_retries
 
         if is_final_attempt:
             push_to_dlq(
@@ -121,6 +126,9 @@ def run_prediction_task(self, pipeline_data):
                 exc=e,
             )
 
+            record_error(self.name)
+
+        record_retry(self.name)
         task_log(
             40,
             "ai.emotion_prediction.retry",
@@ -129,6 +137,7 @@ def run_prediction_task(self, pipeline_data):
             task_id=self.request.id,
             error = f"{e.__class__.__name__}: {str(e) or 'no message'}",
         )
+
         raise
 
     except (KeyError, TypeError, JSONDecodeError) as e:
@@ -141,6 +150,7 @@ def run_prediction_task(self, pipeline_data):
             exc=e,
         )
 
+        record_error(self.name)
         task_log(
             40,
             "ai.pipeline_data_error.failure",
@@ -161,6 +171,7 @@ def run_prediction_task(self, pipeline_data):
             exc=e,
         )
 
+        record_error(self.name)
         task_log(
             50,
             "ai.emotion_prediction.failure",
@@ -170,5 +181,9 @@ def run_prediction_task(self, pipeline_data):
             error = f"{e.__class__.__name__}: {str(e) or 'no message'}",
         )
         raise Ignore()
+
+    finally:
+        duration_ms = int((time.monotonic() - start) * 1000)
+        record_latency(self.name, duration_ms)
 
 # celery -A celery_worker:celery worker -l INFO -P solo
