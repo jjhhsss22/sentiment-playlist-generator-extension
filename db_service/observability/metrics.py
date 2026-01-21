@@ -1,7 +1,6 @@
 import time
 import redis
 
-SERVICE = "database"
 METRICS_REDIS_URL = "redis://localhost:6379/3"
 
 redis_metrics = redis.Redis.from_url(METRICS_REDIS_URL, decode_responses=True)
@@ -10,62 +9,93 @@ redis_metrics = redis.Redis.from_url(METRICS_REDIS_URL, decode_responses=True)
 
 def _bucket(minutes: int = 1) -> str:
     """
-    Returns time bucket for aggregation.
-    Default: per-minute bucket.
+    returns time bucket for aggregation
+    default: per-minute bucket
     """
     return str(int(time.time() // (60 * minutes)))
 
 
 def _key(task: str, metric: str, window: str) -> str:
     """
-    Returns the redis key for a metric and window combination.
+    returns the redis key for a metric and window combination
     """
 
-    return f"metrics:{SERVICE}:{task}:{metric}:{window}"
+    return f"metrics:{task}:{metric}:{window}"
 
 
 # public
 
+LATENCY_MAX_LUA = """
+    local key = KEYS[1]
+    local value = tonumber(ARGV[1])
+
+    local current = redis.call("GET", key)
+    if not current or tonumber(current) < value then
+        redis.call("SET", key, value)
+    end
+    """
+
+
 def record_latency(task: str, duration_ms: int):
     """
-    Record task latency.
-    increments sum & count so p95 can be estimated later.
+    record task latency
+    increments sum & count and finds max latency via lua script so that p95 can be estimated later
     """
     window = _bucket()
 
+    sum_key = _key(task, "latency_sum", window)
+    count_key = _key(task, "latency_count", window)
+    max_key = _key(task, "latency_max", window)
+
     pipe = redis_metrics.pipeline()
-    pipe.incrby(_key(task, "latency_sum", window), duration_ms)
-    pipe.incr(_key(task, "latency_count", window))
-    pipe.expire(_key(task, "latency_sum", window), 3600)
-    pipe.expire(_key(task, "latency_count", window), 3600)
+    pipe.incrby(sum_key, duration_ms)
+    pipe.incr(count_key)
+    pipe.expire(sum_key, 3600)
+    pipe.expire(count_key, 3600)
     pipe.execute()
+
+    # max lua script cannot be pipelined
+    redis_metrics.eval(
+        LATENCY_MAX_LUA,
+        1,
+        max_key,
+        duration_ms,
+    )
+
+    redis_metrics.expire(max_key, 3600)
 
 
 def record_error(task: str):
     """
-    Increment error counter.
+    increment error counter
     """
     window = _bucket()
 
-    redis_metrics.incr(_key(task, "errors", window))
-    redis_metrics.expire(_key(task, "errors", window), 3600)
+    error_key = _key(task, "errors", window)
+
+    redis_metrics.incr(error_key)
+    redis_metrics.expire(error_key, 3600)
 
 
 def record_retry(task: str):
     """
-    Increment retry counter.
+    increment retry counter
     """
     window = _bucket()
 
-    redis_metrics.incr(_key(task, "retries", window))
-    redis_metrics.expire(_key(task, "retries", window), 3600)
+    retry_key = _key(task, "retries", window)
+
+    redis_metrics.incr(retry_key)
+    redis_metrics.expire(retry_key, 3600)
 
 
 def record_success(task: str):
     """
-    Track successful executions (throughput).
+    increment success counter (throughput)
     """
     window = _bucket()
 
-    redis_metrics.incr(_key(task, "success", window))
-    redis_metrics.expire(_key(task, "success", window), 3600)
+    success_key = _key(task, "success", window)
+
+    redis_metrics.incr(success_key)
+    redis_metrics.expire(success_key, 3600)

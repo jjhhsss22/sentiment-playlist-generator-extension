@@ -1,0 +1,1 @@
+DB_URI = 'mysql+pymysql://root:sqlsecretkey123@localhost/spge'

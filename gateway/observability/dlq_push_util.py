@@ -11,18 +11,19 @@ def push_to_dlq(
     exc,
 ):
     """
-    Push a failed task to Redis DLQ.
+    push a failed task to Redis DLQ.
 
-    - Metadata stored in a HASH (fast scans, low memory)
-    - Payload stored separately with TTL (privacy + size control)
-    - Indexed by timestamp for analytics / cron recovery jobs
+    - metadata stored in a HASH (fast scans, low memory)
+    - payload stored separately with TTL (privacy + size control)
+    - indexed by timestamp for analytics / cron recovery jobs
     """
 
     service="gateway"
     ts = time.time()
+    window = int(ts // 60)
 
-    dlq_key = f"dlq:gateway:task:{task.request.id}"
-    payload_key = f"dlq:gateway:payload:{request_id}"
+    dlq_key = f"dlq:{service}:task:{task.request.id}"
+    payload_key = f"dlq:{service}:payload:{request_id}"
 
     redis_dlq.hset(
         dlq_key,
@@ -36,13 +37,14 @@ def push_to_dlq(
             "error_message": str(exc) or "no message",
             "retries": task.request.retries,
             "timestamp": ts,
+            "window": window,
         }
     )
 
-    # Index for scanning / analytics
+    # index for analytics
     redis_dlq.zadd("dlq:index", {dlq_key: ts})
 
-    # Store payload separately with TTL
+    # store payload separately with TTL
     if payload is not None:
         redis_dlq.setex(
             payload_key,
