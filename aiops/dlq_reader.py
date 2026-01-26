@@ -20,7 +20,17 @@ def read_recent_dlq_entries(since_seconds=300):
     entries = []
     for key in keys:
         data = redis_dlq.hgetall(key)
-        if data:
-            entries.append(data)
+        if not data:
+            continue
+
+        entries.append({
+            "dlq_key": key,
+            "task": data.get("task_name"),
+            "error_type": data.get("error_type"),
+            "count": int(data.get("count", 0)),
+            "first_seen": float(data.get("first_seen", 0)),
+            "last_seen": float(data.get("last_seen", 0)),
+            "retries": int(data.get("retries", 0)),
+        })
 
     return entries

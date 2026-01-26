@@ -18,6 +18,12 @@ def excessive_retries(metrics, max_retries=5):
 
     return metrics["retries"] >= max_retries
 
+def excessive_dlq_recurrence(dlq_entry, threshold=5):
+    """
+    Flag if the same failure repeats many times.
+    """
+    return dlq_entry["count"] >= threshold
+
 def latency_spike(metrics, baseline_ms=1500):
     """
     flag raised if maximum latency exceeds baseline ms

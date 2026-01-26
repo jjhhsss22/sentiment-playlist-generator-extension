@@ -64,6 +64,11 @@ def record_latency(task: str, duration_ms: int):
 
     redis_metrics.expire(max_key, 3600)
 
+    lat_key = f"latencies:{task}:{window}"
+    redis_metrics.zadd(lat_key, {str(time.time()): duration_ms})
+    redis_metrics.zremrangebyrank(lat_key, 0, -10001)  # keep last 10k
+    redis_metrics.expire(lat_key, 3600)
+
 
 def record_error(task: str):
     """
