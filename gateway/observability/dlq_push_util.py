@@ -4,9 +4,8 @@ import hashlib
 
 
 def _stable_hash(data) -> str:
-    """
-    Create a stable hash for payload deduplication.
-    """
+    """create a stable hash for payload deduplication."""
+
     if data is not None:
         dumped = json.dumps(data, sort_keys=True, default=str)
         return hashlib.sha256(dumped.encode()).hexdigest()[:12]

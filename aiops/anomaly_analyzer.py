@@ -14,6 +14,7 @@ def analyze():
                 "type": "REPEATED_DLQ_FAILURE",
                 "severity": "critical",
                 "task": entry["task"],
+                "service": entry["service"],
                 "error_type": entry["error_type"],
                 "count": entry["count"],
                 "dlq_key": entry["dlq_key"],
@@ -25,11 +26,15 @@ def analyze():
     for task in list_tasks():  # metrics analysis
         metric = read_task_metrics(task)
 
+        # extract service from task name
+        service = task.split(".")[0] if "." in task else "unknown"
+
         if high_error_rate(metric):
             anomalies.append({
                 "type": "HIGH_ERROR_RATE",
                 "severity": "high",
                 "task": task,
+                "service": service,
                 "metrics": metric,
             })
 
@@ -38,6 +43,7 @@ def analyze():
                 "type": "HIGH_RETRY_RATE",
                 "severity": "medium",
                 "task": task,
+                "service": service,
                 "metrics": metric,
             })
 
@@ -46,6 +52,25 @@ def analyze():
                 "type": "LATENCY_SPIKE",
                 "severity": "medium",
                 "task": task,
+                "service": service,
+                "metrics": metric,
+            })
+
+        if latency_p95_spike(metric):
+            anomalies.append({
+                "type": "LATENCY_P95_SPIKE",
+                "severity": "high",
+                "task": task,
+                "service": service,
+                "metrics": metric,
+            })
+
+        if latency_p99_degradation(metric):
+            anomalies.append({
+                "type": "LATENCY_P99_DEGRADATION",
+                "severity": "medium",
+                "task": task,
+                "service": service,
                 "metrics": metric,
             })
 

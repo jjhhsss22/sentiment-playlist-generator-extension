@@ -34,3 +34,36 @@ why use ALL logging, dlq and metrics count?
     dlq tells us what exactly went wrong WHEN something goes wrong (currently my dlq is purely to be used for mlops later, but can add some sort of logic later on)
     metrics just counts important metrics for our project (e.g. duration ms)
     we combine these two to provide transparency in observation later on.
+
+
+why does each service have an observability module for dlq and metrics?
+The original plan was to separate these services in individual servers so for simplicity, i decided to create separate
+utils in each service instead of a shared global util.
+This approach would have been bad, but given that there are only 4/3 services to manage, i decided to trade off convenience in maintainability
+with simplicity.
+(a better approach may have been to create a shared custom library or add an observability interceptor/middleware)
+
+aiops
+distributed event collection system → time-series aggregation → rule-based anomaly detection → deduplicated alerting.
+
+Fingerprinting at TWO levels:
+
+DLQ level: Same failure = same DLQ key (count increases)
+Anomaly level: Same anomaly = same fingerprint (prevent duplicate alerts)
+
+Time-bucketed aggregation:
+
+Metrics grouped per-minute
+Reduces Redis memory (17 requests → 1 counter)
+Enables trend analysis
+
+Percentile tracking:
+
+Sorted sets store individual latencies
+Calculate p95/p99 for better signal than average
+
+Separation of concerns:
+
+Hot data (metrics): Redis with 1h TTL
+Sensitive data (payloads): Redis with 24h TTL
+Historical data (anomalies): MySQL forever

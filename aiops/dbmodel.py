@@ -25,7 +25,8 @@ class AnomalyResult(Base):
     # timing
     window_start = Column(DateTime, nullable=False)
     window_end = Column(DateTime, nullable=False)
-    detected_at = Column(DateTime, server_default=func.now())
+    detected_at = Column(DateTime, server_default=func.now())  # for lookback queries that prevent duplicate anomaly reports
+    last_seen = Column(DateTime, nullable=True)
 
     # evidence
     metrics = Column(JSON, nullable=True)
@@ -38,4 +39,5 @@ class AnomalyResult(Base):
 
     __table_args__ = (
         Index("idx_anomaly_fingerprint", "fingerprint", unique=True),
+        Index("idx_anomaly_lookup", "type", "task", "detected_at"),  # for noise reduction queries
     )

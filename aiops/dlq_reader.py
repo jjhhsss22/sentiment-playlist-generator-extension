@@ -26,6 +26,7 @@ def read_recent_dlq_entries(since_seconds=300):
         entries.append({
             "dlq_key": key,
             "task": data.get("task_name"),
+            "service": data.get("service"),
             "error_type": data.get("error_type"),
             "count": int(data.get("count", 0)),
             "first_seen": float(data.get("first_seen", 0)),

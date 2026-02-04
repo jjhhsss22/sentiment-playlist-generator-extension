@@ -13,12 +13,13 @@ def run(interval_seconds=300):
     """
 
     while True:
-        window_end = time.time()
-        window_start = window_end - interval_seconds
+        current_time = time.time()
+        window_end_ts = (current_time // 60) * 60  # Round down to minute boundary
+        window_start_ts = window_end_ts - interval_seconds
 
         # Convert to datetime objects
-        window_start_dt = datetime.fromtimestamp(window_start)
-        window_end_dt = datetime.fromtimestamp(window_end)
+        window_start_dt = datetime.fromtimestamp(window_start_ts)
+        window_end_dt = datetime.fromtimestamp(window_end_ts)
 
         # Expected: list[dict] of anomaly payloads
         anomalies = analyze()
