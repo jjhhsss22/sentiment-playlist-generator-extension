@@ -1,8 +1,9 @@
 from flask import Flask, g, request
 import pymysql
 import logging
+import os
 
-from db_service.db_structure.dbmodels import db
+from db_structure.dbmodels import db
 from log_logic.db_logging_config import configure_logging
 
 pymysql.install_as_MySQLdb()
@@ -15,9 +16,13 @@ def create_db():
 
     app = Flask(__name__)
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:sqlsecretkey123@localhost/spge'
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+        "DATABASE_URL",
+        "mysql+pymysql://root:sqlsecretkey123@db:3306/spge"
+    )
+
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SECRET_KEY'] = 'sqlsecretkey123'
+    app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "sqlsecretkey123")
 
     db.init_app(app)
 

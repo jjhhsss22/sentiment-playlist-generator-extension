@@ -1,0 +1,4 @@
+redis==7.3.0
+SQLAlchemy==2.0.48
+pymysql
+cryptography

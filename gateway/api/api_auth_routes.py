@@ -1,12 +1,12 @@
 from flask import request, jsonify, Blueprint, g
 import requests
 
-from gateway.log_logic.log_util import log
+from log_logic.log_util import log
 
 api_auth_bp = Blueprint('auth', __name__)
 
-DB_API_URL = "http://127.0.0.1:8003"
-AUTH_API_URL = "http://127.0.0.1:8004"
+AUTH_API_URL = "http://auth_service:8004"
+DB_API_URL = "http://db_service:8003"
 
 @api_auth_bp.route('/signup', methods=['POST'])
 def signup():

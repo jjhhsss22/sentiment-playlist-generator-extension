@@ -1,7 +1,11 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+import os
 
-DATABASE_URL = 'mysql+pymysql://root:sqlsecretkey123@localhost/spge'
+DATABASE_URL = os.environ.get(
+        "DATABASE_URL",
+        "mysql+pymysql://root:sqlsecretkey123@db:3306/spge"
+    )
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

@@ -2,6 +2,7 @@ from celery import Celery
 import redis
 import json
 import time
+import os
 from celery.exceptions import Ignore
 from requests.exceptions import Timeout, ConnectionError
 
@@ -11,10 +12,9 @@ from observability.metrics import record_latency, record_success, record_error, 
 
 # sys.path.append("/app")  # for docker
 
-# redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
-CELERY_REDIS_URL = "redis://localhost:6379/0"
-CACHE_REDIS_URL = "redis://localhost:6379/1"
-DLQ_REDIS_URL = "redis://localhost:6379/2"
+CELERY_REDIS_URL = os.environ.get("CELERY_REDIS_URL", "redis://redis:6379/0")
+CACHE_REDIS_URL = os.environ.get("CACHE_REDIS_URL", "redis://redis:6379/1")
+DLQ_REDIS_URL = os.environ.get("DLQ_REDIS_URL", "redis://redis:6379/2")
 
 celery = Celery(
     "music",

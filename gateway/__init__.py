@@ -1,4 +1,5 @@
 from flask import Flask, g, request
+import os
 import uuid
 from log_logic.gw_logging_config import configure_logging
 import logging
@@ -14,8 +15,13 @@ def create_app():
 
     app = Flask(__name__)  # set up flask environment
 
+    redis_url = os.environ.get(
+        "CACHE_REDIS_URL",
+        "redis://redis:6379/1"  # default for Docker
+    )
+
     app.extensions["redis_cache"] = redis.Redis.from_url(
-        "redis://localhost:6379/1",  # cache DB in redis instance
+        redis_url,  # cache DB in redis instance
         decode_responses=True
     )
 

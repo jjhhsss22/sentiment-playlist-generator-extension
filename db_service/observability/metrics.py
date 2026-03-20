@@ -1,7 +1,8 @@
 import time
 import redis
+import os
 
-METRICS_REDIS_URL = "redis://localhost:6379/3"
+METRICS_REDIS_URL = os.environ.get("METRICS_REDIS_URL", "redis://redis:6379/3")
 
 redis_metrics = redis.Redis.from_url(METRICS_REDIS_URL, decode_responses=True)
 

@@ -1,4 +1,4 @@
-from db_service.db_structure.dbmodels import User, Playlist, db
+from db_structure.dbmodels import User, Playlist, db
 from werkzeug.security import generate_password_hash
 from sqlalchemy.exc import IntegrityError
 

@@ -10,15 +10,20 @@ class JsonFormatter(logging.Formatter):
         self.service_name = service_name
 
     def format(self, record):
-        log = {
+        base_log = {
             "timestamp": datetime.utcnow().isoformat(),
             "request_id": getattr(record, "request_id", None),
             "service": self.service_name,
             "level": record.levelname,
-            "message": record.getMessage(),
             "logger": record.name,
         }
-        return json.dumps(log)
+
+        if isinstance(record.msg, dict):
+            base_log.update(record.msg)
+        else:
+            base_log["message"] = record.getMessage()
+
+        return json.dumps(base_log)
 
 class RequestIdFilter(logging.Filter):
     def filter(self, record):
@@ -29,7 +34,7 @@ class RequestIdFilter(logging.Filter):
         return True
 
 def configure_logging(service_name: str = "music"):
-    logger = logging.getLogger(service_name)
+    logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
     # stdout for normal logs

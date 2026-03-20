@@ -1,9 +1,9 @@
-from flask import Blueprint, request, jsonify
-
-from celery_worker import run_prediction_task
-from log_logic.log_util import log
-
-ai_bp = Blueprint('ai', __name__)
+# from flask import Blueprint, request, jsonify
+#
+# from celery_worker import run_prediction_task
+# from log_logic.log_util import log
+#
+# ai_bp = Blueprint('ai', __name__)
 
 # @ai_bp.route("/predict", methods=["POST"])
 # def return_prediction():
@@ -51,8 +51,8 @@ ai_bp = Blueprint('ai', __name__)
 #         log(50, "celery task failed", task_id=task.id, task_state=task.state)
 #         return jsonify({"status": task.state}), 500
 
-
-# AI api server health check
-@ai_bp.route("/health", methods=["GET"])
-def health_check():
-    return jsonify({"status": "ok"}), 200
+#
+# # AI api server health check
+# @ai_bp.route("/health", methods=["GET"])
+# def health_check():
+#     return jsonify({"status": "ok"}), 200

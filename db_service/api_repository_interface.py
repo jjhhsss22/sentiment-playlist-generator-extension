@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, g
 
-from db_service.db_structure.db_module import get_user_info, get_playlists, create_user, create_playlist, save
+from db_structure.db_module import get_user_info, get_playlists, create_user, create_playlist, save
 from log_logic.log_util import log
 
 db_bp = Blueprint('db', __name__)

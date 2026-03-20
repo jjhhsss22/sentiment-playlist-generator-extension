@@ -1,43 +1,175 @@
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
 
 services:
+  # Redis (broker, cache, DLQ)
   redis:
+    networks:
+      - app_network
     image: redis:7
-    container_name: redis
-    ports:
-      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
+    restart: unless-stopped
 
-  ai_service:
-    build: ./ai_service
-    container_name: ai_service
+  db:
+    networks:
+      - app_network
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: sqlsecretkey123
+      MYSQL_DATABASE: spge
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-psqlsecretkey123"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  gateway:
+    networks:
+      - app_network
+    build: ./gateway
+    command: python run.py
+    logging: *default-logging
     ports:
-      - "8001:8001"
+      - "5000:5000"
     environment:
       - CELERY_REDIS_URL=redis://redis:6379/0
-      - FLASK_ENV=production
+      - CACHE_REDIS_URL=redis://redis:6379/1
+      - METRICS_REDIS_URL=redis://redis:6379/3
     depends_on:
       redis:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://127.0.0.1:8001/health" ]
-      interval: 15s
-      timeout: 5s
-      retries: 3
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  gateway_worker:
+    networks:
+      - app_network
+    build: ./gateway
+    command: celery -A celery_worker.celery worker --loglevel=info
+    logging: *default-logging
+    environment:
+      - CELERY_REDIS_URL=redis://redis:6379/0
+      - CACHE_REDIS_URL=redis://redis:6379/1
+      - DLQ_REDIS_URL=redis://redis:6379/2
+      - METRICS_REDIS_URL=redis://redis:6379/3
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
 
   ai_worker:
+    networks:
+      - app_network
     build: ./ai_service
-    container_name: ai_worker
     command: celery -A celery_worker.celery worker --loglevel=info --pool=solo
-             # pool=solo for Tensorflow model to handle one task at a time (prevent forking which breaks Tensorflow)
+    # pool=solo for Tensorflow model to handle one task at a time (prevent forking which breaks Tensorflow)
+    logging: *default-logging
     environment:
-      - REDIS_URL=redis://redis:6379/0
+      - CELERY_REDIS_URL=redis://redis:6379/0
+      - CACHE_REDIS_URL=redis://redis:6379/1
+      - DLQ_REDIS_URL=redis://redis:6379/2
+      - METRICS_REDIS_URL=redis://redis:6379/3
     depends_on:
       redis:
         condition: service_healthy
+    restart: unless-stopped
+
+  music_worker:
+    networks:
+      - app_network
+    build: ./music_service
+    command: celery -A celery_worker.celery worker --loglevel=info
+    logging: *default-logging
+    environment:
+      - CELERY_REDIS_URL=redis://redis:6379/0
+      - CACHE_REDIS_URL=redis://redis:6379/1
+      - DLQ_REDIS_URL=redis://redis:6379/2
+      - METRICS_REDIS_URL=redis://redis:6379/3
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db_service:
+    networks:
+      - app_network
+    build: ./db_service
+    command: python run_db.py
+    logging: *default-logging
+    ports:
+      - "8003:8003"
+    environment:
+      - METRICS_REDIS_URL=redis://redis:6379/3
+      - DATABASE_URL=mysql+pymysql://root:sqlsecretkey123@db:3306/spge
+      - SECRET_KEY=sqlsecretkey123
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db_worker:
+    networks:
+      - app_network
+    build: ./db_service
+    command: celery -A celery_worker.celery worker --loglevel=info
+    logging: *default-logging
+    environment:
+      - CELERY_REDIS_URL=redis://redis:6379/0
+      - DLQ_REDIS_URL=redis://redis:6379/2
+      - METRICS_REDIS_URL=redis://redis:6379/3
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  auth_service:
+    networks:
+      - app_network
+    build: ./auth_service
+    command: python run_auth.py
+    logging: *default-logging
+    ports:
+      - "8004:8004"
+    environment:
+      - METRICS_REDIS_URL=redis://redis:6379/3
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  observability:
+    networks:
+      - app_network
+    build: ./aiops
+    command: python run_analyzer.py
+    environment:
+      - DATABASE_URL=mysql+pymysql://root:sqlsecretkey123@db:3306/spge
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  db_data:
+
+networks:
+  app_network:
+
 
 #logging:
 #  driver: "json-file"

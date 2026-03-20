@@ -9,11 +9,8 @@ from celery_worker import generate_playlist_pipeline  # correct import scope?
 
 api_home_bp = Blueprint('api_home', __name__)
 
-AI_API_URL = "http://127.0.0.1:8001"
-MUSIC_API_URL = "http://127.0.0.1:8002/create-playlist"
-DB_API_URL = "http://127.0.0.1:8003/new-playlist"
-AUTH_API_URL = "http://127.0.0.1:8004/jwt/verify"
-
+AUTH_API_URL = "http://auth_service:8004/jwt/verify"
+DB_API_URL = "http://db_service:8003/new-playlist"
 
 def get_redis_cache():  # used in home route
     return current_app.extensions.get("redis_cache")

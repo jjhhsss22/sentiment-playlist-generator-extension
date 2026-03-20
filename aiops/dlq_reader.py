@@ -1,7 +1,8 @@
 import redis
 import time
+import os
 
-DLQ_REDIS_URL = "redis://localhost:6379/2"
+DLQ_REDIS_URL = os.environ.get("DLQ_REDIS_URL", "redis://redis:6379/2")
 redis_dlq = redis.Redis.from_url(DLQ_REDIS_URL, decode_responses=True)
 
 def read_recent_dlq_entries(since_seconds=300):

@@ -1,34 +1,29 @@
 FROM python:3.11-slim
 
-
 WORKDIR /app
-
 
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     git \
     curl \
+    build-essential \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# ca-certificates = for HTTPS requests
-# git = just incase repository cloning needed
-# curl = for health checks or debugging
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-
-COPY ai_requirements.txt .
-RUN pip install --no-cache-dir -r ai_requirements.txt
-
-
+# NLTK data
 RUN python -m nltk.downloader punkt punkt_tab -d /usr/local/share/nltk_data
 ENV NLTK_DATA=/usr/local/share/nltk_data
 
-# need to download external data separately for NLTK
-
-
 COPY . .
 
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
 
-EXPOSE 8001
-
-
-CMD ["python", "run_ai.py"]
+# default (can be overridden by docker-compose)
+CMD ["celery", "-A", "celery_worker.celery", "worker", "--loglevel=info", "--pool=solo"]

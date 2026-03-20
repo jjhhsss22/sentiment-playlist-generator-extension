@@ -5,8 +5,8 @@ from log_logic.log_util import log
 
 api_profile_bp = Blueprint('api_profile', __name__)
 
-DB_API_URL = "http://127.0.0.1:8003/playlist"
-AUTH_API_URL = "http://127.0.0.1:8004/jwt/verify"
+AUTH_API_URL = "http://auth_service:8004/jwt/verify"
+DB_API_URL = "http://db_service:8003/playlist"
 
 @api_profile_bp.route('/profile', methods=['GET'])
 def api_profile():

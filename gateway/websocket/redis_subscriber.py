@@ -2,13 +2,14 @@ import json
 import threading
 import redis
 import time
+import os
 
 from websocket.socket import socketio
 from log_logic.log_util import redis_log
 
 REDIS_CLIENT = redis.Redis.from_url(
-    "redis://localhost:6379/1",
-    decode_responses=True  # message sent as str not bytes
+    os.environ.get("CACHE_REDIS_URL", "redis://redis:6379/1"),
+    decode_responses=True
 )
 
 def listen_for_results():
@@ -33,7 +34,7 @@ def listen_for_results():
                     payload = json.loads(message["data"])
                     request_id = payload.get("request_id")
 
-                    if not request_id or not result:
+                    if not request_id:
                         redis_log(
                             30,
                             "redis_message_invalid",
@@ -69,7 +70,7 @@ def listen_for_results():
                     redis_log(
                         30,
                         "websocket_emit_failed",
-                        request_id,
+                        request_id=request_id,
                         error=f"{e.__class__.__name__}: {str(e)}",
                     )
 
