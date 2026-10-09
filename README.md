@@ -1,14 +1,69 @@
 # sentiment-playlist-generator-extension
-improvements to the original sentiment playlist generator project. This is over engineered by design to learn system design and real deployment knowledge.
+improvements to the original sentiment playlist generator project
 
-This project explores the intersection of machine learning and music recommendation. It uses sentiment analysis to classify text input from the user into different emotions, and then generates a playlist that the gradually transitions from the detected emotion to the user's emotion of choice.
 
-A dataset of 1,000 songs is mapped onto a 2D Valence–Arousal graph, allowing a graph traversal algorithm to find a smooth emotional path between the starting and target moods.
 
-🧠 Modeling: trained on a labeled dataset of emotions using neural networks.
 
-🎵 Application: maps predicted sentiment → emotion-sensitive playlist generation.
 
-💡 Goal: demonstrate how AI can bridge natural language understanding and personalized music experiences, including potential applications in music therapy.
 
-documentation for the original project: https://docs.google.com/document/d/1xRGxF-19MLz0YQcSxIe7rRYlSt83DojQSZsl5oeYK54/edit?usp=sharing
+why use a distributed system with five different microservices
+    why we need:
+        gateway - wanted it to act as the source of all truth for other microservices
+        ai - needed for when I want to scale or re-train AI model later on
+        music - right now all songs in my project are simply all objects in a Songs class. Therefore, I wanted to split
+        (also, ai and music most likely to be the main source of errors so need to split them up)
+        db - this is necessary, cannot have user-facing servers access the db
+        auth - wanted this server to act as the single source of truth for all user authentication
+
+why the addition of celery tasks for async and not just stick with the previous structure
+    keeps gateway responsive and open for other connection.
+    significantly reduces request response time.
+
+why pubsub listener thread for each gateway with websocket connection per request from frontend
+    this is a perfect addition to the celery task.
+    Instead of the frontend polling until the task is finished, which can slow down gateway if multiple requests are waiting simultaneously
+    We use webscoket with a pubsub listener which is computationally less costly than responding to each polling request
+
+why redis caching
+    It has come to my attention that certain emotions are way more common for the majority of users (e.g. sad->happiness, boredom->enthusiasm)
+    therefore, it only made sense to use caching for the ai prediction and the playlist generation algorithms.
+    My metrics show these two tasks as the main bottleneck for response latency.
+
+why use ALL logging, dlq and metrics count?
+    logging is for short-term forensics and debugging for developers (also in suitable format for services like cloudwatch)
+    dlq tells us what exactly went wrong WHEN something goes wrong (currently my dlq is purely to be used for mlops later, but can add some sort of logic later on)
+    metrics just counts important metrics for our project (e.g. duration ms)
+    we combine these two to provide transparency in observation later on.
+
+
+why does each service have an observability module for dlq and metrics?
+The original plan was to separate these services in individual servers so for simplicity, i decided to create separate
+utils in each service instead of a shared global util.
+This approach would have been bad, but given that there are only 4/3 services to manage, i decided to trade off convenience in maintainability
+with simplicity.
+(a better approach may have been to create a shared custom library or add an observability interceptor/middleware)
+
+aiops
+distributed event collection system → time-series aggregation → rule-based anomaly detection → deduplicated alerting.
+
+Fingerprinting at TWO levels:
+
+DLQ level: Same failure = same DLQ key (count increases)
+Anomaly level: Same anomaly = same fingerprint (prevent duplicate alerts)
+
+Time-bucketed aggregation:
+
+Metrics grouped per-minute
+Reduces Redis memory (17 requests → 1 counter)
+Enables trend analysis
+
+Percentile tracking:
+
+Sorted sets store individual latencies
+Calculate p95/p99 for better signal than average
+
+Separation of concerns:
+
+Hot data (metrics): Redis with 1h TTL
+Sensitive data (payloads): Redis with 24h TTL
+Historical data (anomalies): MySQL forever

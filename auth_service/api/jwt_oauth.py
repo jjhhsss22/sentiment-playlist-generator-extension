@@ -17,6 +17,7 @@ jwt_bp = Blueprint('jwt', __name__)
 @jwt_required()
 def verify_jwt():
     origin = request.headers.get("API-Requested-With", "")
+    g.request_id = request.headers.get("request-id")
 
     if origin != "Home Gateway":
         log(50, "forbidden request not from gateway")
@@ -25,6 +26,7 @@ def verify_jwt():
     for _ in range(3):
         try:
             user_id = get_jwt_identity()
+            g.user_id = user_id
             return jsonify({"success": True, "user_id": user_id}), 200
         except Exception as e:
             log(40, "failed to get user id", error=e)
@@ -36,6 +38,8 @@ def verify_jwt():
 @jwt_bp.route("/assign", methods=["POST"])
 def assign_jwt():
     origin = request.headers.get("API-Requested-With", "")
+    g.request_id = request.headers.get("request-id")
+    g.user_id = request.headers.get("user-id")
 
     if origin != "Home Gateway":
         log(50, "forbidden request not from gateway")
@@ -78,6 +82,8 @@ def assign_jwt():
 @jwt_bp.route("/remove", methods=["POST"])
 def remove_jwt():
     origin = request.headers.get("API-Requested-With", "")
+    g.request_id = request.headers.get("request-id")
+    g.user_id = request.headers.get("user-id")
 
     if origin != "Home Gateway":
         log(50, "forbidden request not from gateway")

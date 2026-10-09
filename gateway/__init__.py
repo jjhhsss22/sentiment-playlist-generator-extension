@@ -1,15 +1,32 @@
 from flask import Flask, g, request
+import os
 import uuid
 from log_logic.gw_logging_config import configure_logging
 import logging
+import redis
+from websocket.socket import socketio
+from websocket.redis_subscriber import start_listener
 
 def create_app():
     configure_logging() # logging setup
 
-    log = logging.getLogger('werkzeug')  # to suppress HTTP logs from werkzeug
-    log.setLevel(logging.WARNING)
+    wz_log = logging.getLogger('werkzeug')  # to suppress HTTP logs from werkzeug
+    wz_log.setLevel(logging.WARNING)
 
     app = Flask(__name__)  # set up flask environment
+
+    redis_url = os.environ.get(
+        "CACHE_REDIS_URL",
+        "redis://redis:6379/1"  # default for Docker
+    )
+
+    app.extensions["redis_cache"] = redis.Redis.from_url(
+        redis_url,  # cache DB in redis instance
+        decode_responses=True
+    )
+
+    socketio.init_app(app)  # associate app with socketio instance
+    start_listener()  # start redis subscriber thread (1 per gateway instance)
 
     from api.api_profile import api_profile_bp
     from api.api_home import api_home_bp
@@ -30,7 +47,7 @@ def create_app():
     def assign_request_id():
         # 1. If client sent one, reuse it
         incoming = request.headers.get("request-id")
-        g.request_id = incoming or str(uuid.uuid4())
+        g.request_id = incoming or str(uuid.uuid4().hex)
 
     # @app.after_request
     # def add_request_and_user_id_header(response):
