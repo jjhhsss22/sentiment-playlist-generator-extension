@@ -1,8 +1,9 @@
-from flask import request, current_app, g
+from flask import request, g
+import logging
 
 def log(level, event, **extra_kwargs):
 
-    current_app.logger.log(
+    logging.getLogger("database.http").log(
         level,  # level - INFO 20, WARNING 30, ERROR 40, CRITICAL 50
         {
             "event": event,
@@ -10,6 +11,24 @@ def log(level, event, **extra_kwargs):
             "method": request.method,
             "user_id": getattr(g, "user_id", None),
             "ip": request.remote_addr,
+            **extra_kwargs
+        }
+    )
+
+def task_log(level, event, request_id=None, user_id=None, task_id=None, **extra_kwargs):
+    """
+    Logging utility for Celery tasks.
+    No Flask, no request, no JWT.
+    """
+
+    logging.getLogger("database.celery").log(
+        level,
+        {
+            "event": event,
+            "layer": "celery",
+            "request_id": request_id,
+            "user_id": user_id,
+            "task_id": task_id,
             **extra_kwargs
         }
     )

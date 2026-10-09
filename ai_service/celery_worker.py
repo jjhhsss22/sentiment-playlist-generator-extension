@@ -1,20 +1,35 @@
 from celery import Celery
+from celery.exceptions import Ignore
 import os
 import sys
+import redis
+import json
+import time
 import tensorflow as tf
 from tensorflow.errors import InvalidArgumentError
+from requests.exceptions import Timeout, ConnectionError
+from json import JSONDecodeError
 
 from log_logic.log_util import task_log
+from observability.dlq_push_util import push_to_dlq
+from observability.metrics import record_latency, record_success, record_error, record_retry
+
 
 sys.path.append("/app")  # for docker
 
-redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+CELERY_REDIS_URL = os.environ.get("CELERY_REDIS_URL", "redis://redis:6379/0")
+CACHE_REDIS_URL = os.environ.get("CACHE_REDIS_URL", "redis://redis:6379/1")
+DLQ_REDIS_URL = os.environ.get("DLQ_REDIS_URL", "redis://redis:6379/2")
 
 celery = Celery(
-    "ai_tasks",
-    broker=redis_url,
-    backend=redis_url,
+    "ai",
+    broker=CELERY_REDIS_URL,
+    backend=CELERY_REDIS_URL,
 )
+
+celery.conf.task_routes = {
+    "ai.*": {"queue": "ai"}
+}
 
 celery.conf.update(
     task_serializer="json",
@@ -23,6 +38,9 @@ celery.conf.update(
     timezone="Asia/Seoul",
     enable_utc=True,
 )
+
+redis_cache = redis.Redis.from_url(CACHE_REDIS_URL, decode_responses=True)
+redis_dlq = redis.Redis.from_url(DLQ_REDIS_URL, decode_responses=True)
 
 # Load model once at import time (relative to the CWD)
 sentiment_model = tf.keras.models.load_model("model/sentiment_model3.keras", compile=False)
@@ -33,22 +51,139 @@ sentiment_model.compile(optimizer="adam",
 
 
 
-@celery.task
-def run_prediction_task(input_text, desired_emotion):
+@celery.task(
+    name="ai.predict_emotion",
+    bind=True,
+    autoretry_for=(Timeout, ConnectionError),
+    retry_kwargs={"max_retries": 3},
+    retry_backoff=True,  # retries wait longer each time (exponential)
+    retry_jitter=True,  # retries randomly staggered
+)
+def run_prediction_task(self, pipeline_data):
+    start = time.monotonic()
+
     try:
+        self.update_state(
+            state="PROGRESS",
+            meta={"step": "Generating emotion prediction..."},
+        )
+
+        redis_cache.publish(
+            "playlist:progress",
+            json.dumps({
+                "request_id": pipeline_data["request_id"],
+                "step": "Generating emotion prediction...",
+                "task": self.name,
+            })
+        )
+
         from deployment.ai_module import run_prediction_pipeline
-        return run_prediction_pipeline(sentiment_model, input_text, desired_emotion)
+        result = run_prediction_pipeline(
+            sentiment_model,
+            pipeline_data["text"],
+            pipeline_data["desired_emotion"]
+        )
+
+        pipeline_data.update({
+            "ai_result": result,
+        })
+
+        duration_ms = int((time.monotonic() - start) * 1000)
+        record_success(self.name)
+        task_log(
+            20,
+            "ai.emotion_prediction.completed",
+            request_id=pipeline_data["request_id"],
+            user_id=pipeline_data["user_id"],
+            task_id=self.request.id,
+            predicted_emotions=result["predicted_emotions"],
+            duration_ms=duration_ms,
+        )
+
+        return pipeline_data
 
     except InvalidArgumentError:
-        return {"success": False, "message": "please type in full sentences"}
+        self.update_state(
+            state="FAILURE",
+            meta={"success": False,
+                  "message": "Invalid input. Please type in full sentences"}
+        )
+
+        record_error(self.name)
+
+        raise Ignore()
+
+    except (Timeout, ConnectionError) as e:
+        # retries only increments after the retry decision so need to +1
+        is_final_attempt = self.request.retries + 1 >= self.max_retries
+
+        if is_final_attempt:
+            push_to_dlq(
+                redis_dlq=redis_dlq,
+                task=self,
+                request_id=pipeline_data["request_id"],
+                user_id=pipeline_data["user_id"],
+                exc=e,
+            )
+
+            record_error(self.name)
+
+        record_retry(self.name)
+        task_log(
+            40,
+            "ai.emotion_prediction.retry",
+            request_id=pipeline_data["request_id"],
+            user_id=pipeline_data["user_id"],
+            task_id=self.request.id,
+            error = f"{e.__class__.__name__}: {str(e) or 'no message'}",
+        )
+
+        raise
+
+    except (KeyError, TypeError, JSONDecodeError) as e:
+        push_to_dlq(
+            redis_dlq=redis_dlq,
+            task=self,
+            request_id=pipeline_data.get("request_id"),
+            user_id=pipeline_data.get("user_id"),
+            payload=pipeline_data,
+            exc=e,
+        )
+
+        record_error(self.name)
+        task_log(
+            40,
+            "ai.pipeline_data_error.failure",
+            request_id=pipeline_data.get("request_id"),
+            user_id=pipeline_data.get("user_id"),
+            task_id=self.request.id,
+            error = f"{e.__class__.__name__}: {str(e) or 'no message'}",
+        )
+        raise Ignore()
 
     except Exception as e:
+        push_to_dlq(
+            redis_dlq=redis_dlq,
+            task=self,
+            request_id=pipeline_data.get("request_id"),
+            user_id=pipeline_data.get("user_id"),
+            payload=pipeline_data,
+            exc=e,
+        )
+
+        record_error(self.name)
         task_log(
             50,
-            "celery task failure",
-            task_id=run_prediction_task.request.id,
-            error=f"{e.__class__.__name__}: {str(e)}"
+            "ai.emotion_prediction.failure",
+            request_id=pipeline_data["request_id"],
+            user_id=pipeline_data["user_id"],
+            task_id=self.request.id,
+            error = f"{e.__class__.__name__}: {str(e) or 'no message'}",
         )
-        return {"success": False, "message": "AI task failed"}
+        raise Ignore()
+
+    finally:
+        duration_ms = int((time.monotonic() - start) * 1000)
+        record_latency(self.name, duration_ms)
 
 # celery -A celery_worker:celery worker -l INFO -P solo

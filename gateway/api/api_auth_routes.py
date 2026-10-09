@@ -1,12 +1,12 @@
 from flask import request, jsonify, Blueprint, g
 import requests
 
-from gateway.log_logic.log_util import log
+from log_logic.log_util import log
 
 api_auth_bp = Blueprint('auth', __name__)
 
-DB_API_URL = "http://127.0.0.1:8003"
-AUTH_API_URL = "http://127.0.0.1:8004"
+AUTH_API_URL = "http://auth_service:8004"
+DB_API_URL = "http://db_service:8003"
 
 @api_auth_bp.route('/signup', methods=['POST'])
 def signup():
@@ -30,7 +30,8 @@ def signup():
         validate_response = requests.post(
             f"{AUTH_API_URL}/user/validate",
             headers=headers,
-            json=data
+            json=data,
+            timeout=5
         )
 
         try:
@@ -73,7 +74,8 @@ def signup():
             headers=headers,
             json={
                 "username": username
-            }
+            },
+            timeout=5
         )
 
         try:
@@ -139,7 +141,8 @@ def login():
         verify_response = requests.post(
             f"{AUTH_API_URL}/user/verify",
             headers=headers,
-            json=data
+            json=data,
+            timeout=5
         )
 
         try:
@@ -178,7 +181,8 @@ def login():
             headers=headers,
             json={
                 "username": username
-            }
+            },
+            timeout=5
         )
 
         try:
@@ -237,6 +241,7 @@ def logout():
 
     try:
         headers = {"request-id": g.request_id,
+                   "user-id": str(g.user_id),
                    "API-Requested-With": "Home Gateway"
                    }
 
